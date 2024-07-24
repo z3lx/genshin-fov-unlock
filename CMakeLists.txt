@@ -3,14 +3,30 @@ project(genshin-fov-unlock)
 
 set(CMAKE_CXX_STANDARD 20)
 
-# MinHook
-set(MINHOOK_URL "https://github.com/TsudaKageyu/minhook/releases/download/v1.3.3/MinHook_133_lib.zip")
-set(MINHOOK_DIR "${CMAKE_BINARY_DIR}/libs/MinHook")
-set(MINHOOK_ZIP "${MINHOOK_DIR}/MinHook_133_bin.zip")
-file(DOWNLOAD ${MINHOOK_URL} ${MINHOOK_ZIP})
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E tar xzf ${MINHOOK_ZIP}
-    WORKING_DIRECTORY ${MINHOOK_DIR}
+function(download_and_extract url dir)
+    set(ZIP_PATH "${dir}/temp.zip")
+    file(DOWNLOAD ${url} ${ZIP_PATH})
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E tar xzf ${ZIP_PATH}
+        WORKING_DIRECTORY ${dir}
+    )
+    file(REMOVE ${ZIP_PATH})
+endfunction()
+
+set(DEPS_DIR "${CMAKE_BINARY_DIR}/deps")
+
+# TsudaKageyu/minhook
+set(MINHOOK_DIR "${DEPS_DIR}/minhook")
+download_and_extract(
+    "https://github.com/TsudaKageyu/minhook/releases/download/v1.3.3/MinHook_133_lib.zip"
+    "${MINHOOK_DIR}"
+)
+
+# nlohmann/json
+set(JSON_DIR "${DEPS_DIR}/json")
+download_and_extract(
+    "https://github.com/nlohmann/json/releases/download/v3.11.3/include.zip"
+    "${JSON_DIR}"
 )
 
 add_library(
@@ -24,6 +40,7 @@ target_include_directories(
     PRIVATE
     "src"
     ${MINHOOK_DIR}/include
+    ${JSON_DIR}/include
 )
 
 target_link_libraries(
