@@ -5,7 +5,9 @@
 void* trampoline = nullptr;
 
 void SetFieldOfView(void* _this, float value) {
-    reinterpret_cast<decltype(&SetFieldOfView)>(trampoline)(_this, 90.0f);
+    if (value == 45.0f)
+        value = 90.0f;
+    reinterpret_cast<decltype(&SetFieldOfView)>(trampoline)(_this, value);
 }
 
 void Initialize() {
