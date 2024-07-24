@@ -1,6 +1,21 @@
 cmake_minimum_required(VERSION 3.28)
 project(genshin-fov-unlock)
 
+if (NOT WIN32)
+    message(
+        FATAL_ERROR
+        "This project can only be compiled on Windows."
+    )
+endif()
+
+if (NOT MSVC OR NOT "${CMAKE_VS_PLATFORM_TOOLSET}" STREQUAL "v141")
+    message(
+        WARNING
+        "The precompiled MinHook library is built with MSVC v141 (VS 2017). "
+        "If you encounter issues, consider recompiling MinHook from source."
+    )
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 
 function(download_and_extract url dir)
