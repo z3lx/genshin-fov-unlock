@@ -1,6 +1,8 @@
 # Genshin Impact FOV Unlocker
 A plugin for Genshin Impact that unlocks the camera's field of view (FOV) to values greater than the default of 45. It includes a DLL designed to be used in conjunction with [`genshin-fps-unlock`](https://github.com/34736384/genshin-fps-unlock).
 
+![preview](https://github.com/user-attachments/assets/02d750bc-becd-4c9d-bd18-f38c2c1c1023)
+
 ## Usage
 1. Download the latest release of [`genshin-fps-unlock`](https://github.com/34736384/genshin-fps-unlock/releases) if you haven't already.
 2. Download the `genshin-fov-unlock` plugin from the [releases page](https://github.com/z3lx/genshin-fov-unlock/releases) or build it from source. 
