@@ -50,7 +50,7 @@ void SetFieldOfView(void* _this, float value) {
 
 void InitializeHook() {
     auto module = reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr));
-    auto offset = GetModuleHandleA("GenshinImpact.exe") ? 0x1688e60 : 0x1684560;
+    auto offset = GetModuleHandleA("GenshinImpact.exe") ? 0x165a1d0 : 0x165f1d0;
     auto target = reinterpret_cast<void*>(module + offset);
     auto detour = reinterpret_cast<void*>(&SetFieldOfView);
 
