@@ -21,20 +21,20 @@ The plugin should now be loaded the next time you start the game with `genshin-f
 ## Building from source
 To build the plugin from source, follow these steps:
 
-1. Ensure you are on Windows and have MSVC installed.
+1. Ensure you are on Windows and have git, CMake, and MSVC installed.
 2. Clone the repository and navigate to the project directory:
-    ```bash
-    git clone https://github.com/z3lx/genshin-fov-unlock.git
-    cd genshin-fov-unlock
-    ```
+```bash
+git clone https://github.com/z3lx/genshin-fov-unlock.git
+cd genshin-fov-unlock
+```
 3. Configure the project (internet connection required for dependencies):
-    ```bash
-    cmake .
-    ```
+```bash
+cmake .
+```
 4. Build the project:
-    ```bash
-    cmake --build . --config Release
-    ```
+```bash
+cmake --build . --config Release
+```
 
 The compiled DLL will be located in the `Release` directory. If you encounter issues with the precompiled MinHook library, consider recompiling it from source.
 
