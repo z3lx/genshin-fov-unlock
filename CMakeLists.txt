@@ -48,6 +48,8 @@ add_library(
     genshin_fov_unlock
     SHARED
     "src/main.cpp"
+    "src/input.h"
+    "src/input.cpp"
 )
 
 target_include_directories(
