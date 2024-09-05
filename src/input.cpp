@@ -143,10 +143,6 @@ void InputManager::Impl::TriggerOnKeyUp(const int vKey) const {
 }
 
 InputManager::InputManager(
-) : impl(std::make_unique<Impl>()) {
-}
-
-InputManager::InputManager(
     const int pollingRate,
     const HWND window
 ) : impl(std::make_unique<Impl>(pollingRate, window)) {

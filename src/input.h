@@ -8,7 +8,6 @@ class InputManager {
 public:
     using KeyEventCallback = std::function<void(int)>;
 
-    InputManager();
     explicit InputManager(
         int pollingRate = 0,
         HWND window = nullptr
