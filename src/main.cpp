@@ -1,12 +1,12 @@
+#include "config.h"
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <windows.h>
-
 #include <MinHook.h>
 #include <nlohmann/json.hpp>
 
-float fieldOfView = 0;
+Config config;
 
 void InitializeConfig() {
     HMODULE module = nullptr;
@@ -21,22 +21,15 @@ void InitializeConfig() {
     auto moduleDir = std::filesystem::path(modulePath).parent_path();
     auto configPath = moduleDir / "fov_config.json";
 
-    constexpr auto key = "field_of_view";
-    constexpr auto value = 90.0f;
-
     if (std::filesystem::exists(configPath)) {
         std::ifstream file(configPath);
-        nlohmann::json config;
-        file >> config;
-        fieldOfView = config.value(key, value);
-        if (fieldOfView < 1.0f || fieldOfView > 179.0f)
-            fieldOfView = value;
+        nlohmann::json json;
+        file >> json;
+        config = json.get<Config>();
     } else {
-        nlohmann::json config;
-        config[key] = value;
+        nlohmann::json json = config;
         std::ofstream file(configPath);
-        file << config.dump(4);
-        fieldOfView = value;
+        file << json.dump(4);
     }
 }
 
@@ -44,7 +37,7 @@ void* trampoline = nullptr;
 
 void SetFieldOfView(void* _this, float value) {
     if (value == 45.0f)
-        value = fieldOfView;
+        value = config.fieldOfView;
     reinterpret_cast<decltype(&SetFieldOfView)>(trampoline)(_this, value);
 }
 
