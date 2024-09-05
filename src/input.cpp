@@ -11,10 +11,10 @@
 struct InputManager::Impl {
 public:
     Impl();
-    Impl(int pollingRate, HWND window);
+    Impl(int pollingRate, DWORD process);
     ~Impl();
 
-    void SetTrackedWindow(HWND window);
+    void SetTrackedProcess(DWORD process);
     void RegisterOnKeyDown(const KeyEventCallback& callback);
     void RegisterOnKeyUp(const KeyEventCallback& callback);
 
@@ -23,7 +23,7 @@ public:
     void StopPolling();
 
 private:
-    HWND trackedWindow;
+    DWORD trackedProcess;
     int pollingRate;
     std::atomic<bool> isPolling;
     std::thread pollingThread;
@@ -41,7 +41,7 @@ private:
 
 // Not thread-safe
 InputManager::Impl::Impl(
-) : trackedWindow(nullptr)
+) : trackedProcess(0)
   , pollingRate(0)
   , isPolling(false) {
 }
@@ -49,9 +49,9 @@ InputManager::Impl::Impl(
 // Not thread-safe
 InputManager::Impl::Impl(
     const int pollingRate,
-    const HWND window
+    const DWORD process
 ) : Impl() {
-    SetTrackedWindow(window);
+    SetTrackedProcess(process);
     StartPolling(pollingRate);
 }
 
@@ -60,9 +60,9 @@ InputManager::Impl::~Impl() {
     StopPolling();
 }
 
-void InputManager::Impl::SetTrackedWindow(const HWND window) {
+void InputManager::Impl::SetTrackedProcess(const DWORD process) {
     std::lock_guard lock(pollingMutex);
-    trackedWindow = window;
+    trackedProcess = process;
 }
 
 void InputManager::Impl::RegisterOnKeyDown(
@@ -81,8 +81,10 @@ void InputManager::Impl::RegisterOnKeyUp(
 
 void InputManager::Impl::Poll() {
     std::lock_guard lock(pollingMutex);
-    if (trackedWindow != nullptr &&
-        trackedWindow != GetForegroundWindow()) {
+    DWORD foregroundProcess;
+    GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
+    if (trackedProcess != 0 &&
+        trackedProcess != foregroundProcess) {
         return;
     }
 
@@ -144,14 +146,14 @@ void InputManager::Impl::TriggerOnKeyUp(const int vKey) const {
 
 InputManager::InputManager(
     const int pollingRate,
-    const HWND window
-) : impl(std::make_unique<Impl>(pollingRate, window)) {
+    const DWORD process
+) : impl(std::make_unique<Impl>(pollingRate, process)) {
 }
 
 InputManager::~InputManager() = default;
 
-void InputManager::SetTrackedWindow(const HWND window) const {
-    impl->SetTrackedWindow(window);
+void InputManager::SetTrackedProcess(const DWORD process) const {
+    impl->SetTrackedProcess(process);
 }
 
 void InputManager::RegisterOnKeyDown(

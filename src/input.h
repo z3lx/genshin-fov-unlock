@@ -10,11 +10,11 @@ public:
 
     explicit InputManager(
         int pollingRate = 0,
-        HWND window = nullptr
+        DWORD process = 0
     );
     ~InputManager();
 
-    void SetTrackedWindow(HWND window) const;
+    void SetTrackedProcess(DWORD process) const;
     void RegisterOnKeyDown(const KeyEventCallback& callback) const;
     void RegisterOnKeyUp(const KeyEventCallback& callback) const;
 
