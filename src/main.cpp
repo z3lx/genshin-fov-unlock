@@ -49,13 +49,13 @@ void* trampoline = nullptr;
 
 void SetFieldOfView(void* _this, float value) {
     inputManager->Poll();
-    if (value == 45.0f)
+    if (value == 45.0f && config.enabled)
         value = static_cast<float>(config.fov);
     reinterpret_cast<decltype(&SetFieldOfView)>(trampoline)(_this, value);
 }
 
 void OnKeyDown(int vKey) {
-    if (vKey == config.cycleNextKey) {
+    if (vKey == config.nextKey && config.enabled) {
         for (auto i = 0; i < config.fovPresets.size(); ++i) {
             if (const auto presetFov = config.fovPresets[i];
                 config.fov < presetFov) {
@@ -63,7 +63,7 @@ void OnKeyDown(int vKey) {
                 break;
             }
         }
-    } else if (vKey == config.cyclePrevKey) {
+    } else if (vKey == config.prevKey && config.enabled) {
         for (auto i = config.fovPresets.size(); i > 0; --i) {
             if (const auto presetFov = config.fovPresets[i - 1];
                 config.fov > presetFov) {
@@ -71,6 +71,8 @@ void OnKeyDown(int vKey) {
                 break;
             }
         }
+    } else if (vKey == config.enableKey) {
+        config.enabled = !config.enabled;
     }
 }
 

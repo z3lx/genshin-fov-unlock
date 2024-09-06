@@ -7,8 +7,9 @@ struct Config {
     bool enabled = true;
     int fov = 75;
     std::vector<int> fovPresets = { 30, 45, 60, 75, 90, 110 };
-    int cycleNextKey = VK_UP;
-    int cyclePrevKey = VK_DOWN;
+    int enableKey = VK_LEFT;
+    int nextKey = VK_UP;
+    int prevKey = VK_DOWN;
 };
 
 void to_json(nlohmann::json& j, const Config& c) {
@@ -16,8 +17,9 @@ void to_json(nlohmann::json& j, const Config& c) {
         { "enabled", c.enabled },
         { "fov", c.fov },
         { "fov_presets", c.fovPresets },
-        { "cycle_next_key", c.cycleNextKey },
-        { "cycle_prev_key", c.cyclePrevKey }
+        { "enable_key", c.enableKey },
+        { "next_key", c.nextKey },
+        { "prev_key", c.prevKey }
     };
 }
 
@@ -35,6 +37,7 @@ void from_json(const nlohmann::json& j, Config& c) {
     std::ranges::sort(presets);
     c.fovPresets = presets;
 
-    j.at("cycle_next_key").get_to(c.cycleNextKey);
-    j.at("cycle_prev_key").get_to(c.cyclePrevKey);
+    j.at("enable_key").get_to(c.enableKey);
+    j.at("next_key").get_to(c.nextKey);
+    j.at("prev_key").get_to(c.prevKey);
 }
