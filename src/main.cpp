@@ -1,10 +1,22 @@
 #include "config.h"
+#include "input.h"
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <windows.h>
 #include <MinHook.h>
 #include <nlohmann/json.hpp>
+
+std::unique_ptr<InputManager> inputManager;
+void OnKeyDown(int vKey);
+
+void InitializeInput() {
+    inputManager = std::make_unique<InputManager>(
+        0, GetCurrentProcessId()
+    );
+    inputManager->RegisterOnKeyDown(OnKeyDown);
+}
 
 Config config;
 
@@ -36,9 +48,30 @@ void InitializeConfig() {
 void* trampoline = nullptr;
 
 void SetFieldOfView(void* _this, float value) {
+    inputManager->Poll();
     if (value == 45.0f)
-        value = config.fieldOfView;
+        value = static_cast<float>(config.fov);
     reinterpret_cast<decltype(&SetFieldOfView)>(trampoline)(_this, value);
+}
+
+void OnKeyDown(int vKey) {
+    if (vKey == config.cycleNextKey) {
+        for (auto i = 0; i < config.fovPresets.size(); ++i) {
+            if (const auto presetFov = config.fovPresets[i];
+                config.fov < presetFov) {
+                config.fov = presetFov;
+                break;
+            }
+        }
+    } else if (vKey == config.cyclePrevKey) {
+        for (auto i = config.fovPresets.size(); i > 0; --i) {
+            if (const auto presetFov = config.fovPresets[i - 1];
+                config.fov > presetFov) {
+                config.fov = presetFov;
+                break;
+            }
+        }
+    }
 }
 
 void InitializeHook() {
@@ -54,6 +87,7 @@ void InitializeHook() {
 
 void Initialize() {
     InitializeConfig();
+    InitializeInput();
     InitializeHook();
 }
 
