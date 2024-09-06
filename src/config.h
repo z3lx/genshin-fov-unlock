@@ -24,20 +24,24 @@ void to_json(nlohmann::json& j, const Config& c) {
 }
 
 void from_json(const nlohmann::json& j, Config& c) {
-    j.at("enabled").get_to(c.enabled);
+    try {
+        j.at("enabled").get_to(c.enabled);
 
-    int fov;
-    j.at("fov").get_to(fov);
-    if (fov >= 1 && fov <= 179) {
-        c.fov = fov;
+        int fov;
+        j.at("fov").get_to(fov);
+        if (fov >= 1 && fov <= 179) {
+            c.fov = fov;
+        }
+
+        std::vector<int> presets;
+        j.at("fov_presets").get_to(presets);
+        std::ranges::sort(presets);
+        c.fovPresets = presets;
+
+        j.at("enable_key").get_to(c.enableKey);
+        j.at("next_key").get_to(c.nextKey);
+        j.at("prev_key").get_to(c.prevKey);
+    } catch (const std::exception& e) {
+        c = Config();
     }
-
-    std::vector<int> presets;
-    j.at("fov_presets").get_to(presets);
-    std::ranges::sort(presets);
-    c.fovPresets = presets;
-
-    j.at("enable_key").get_to(c.enableKey);
-    j.at("next_key").get_to(c.nextKey);
-    j.at("prev_key").get_to(c.prevKey);
 }

@@ -20,28 +20,39 @@ void InitializeInput() {
 
 Config config;
 
-void InitializeConfig() {
+std::filesystem::path GetConfigPath() {
     HMODULE module = nullptr;
     GetModuleHandleExA(
         GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        reinterpret_cast<LPCTSTR>(&InitializeConfig),
+        reinterpret_cast<LPCTSTR>(&GetConfigPath),
         &module
     );
     char modulePath[MAX_PATH];
     GetModuleFileNameA(module, modulePath, MAX_PATH);
     auto moduleDir = std::filesystem::path(modulePath).parent_path();
-    auto configPath = moduleDir / "fov_config.json";
+    return moduleDir / "fov_config.json";
+}
 
+void WriteConfig(const std::filesystem::path& configPath) {
+    const nlohmann::json json = config;
+    std::ofstream file(configPath);
+    file << json.dump(4);
+}
+
+void ReadConfig(const std::filesystem::path& configPath) {
+    std::ifstream file(configPath);
+    nlohmann::json json;
+    file >> json;
+    config = json.get<Config>();
+}
+
+void InitializeConfig() {
+    const auto configPath = GetConfigPath();
     if (std::filesystem::exists(configPath)) {
-        std::ifstream file(configPath);
-        nlohmann::json json;
-        file >> json;
-        config = json.get<Config>();
+        ReadConfig(configPath);
     } else {
-        nlohmann::json json = config;
-        std::ofstream file(configPath);
-        file << json.dump(4);
+        WriteConfig(configPath);
     }
 }
 
@@ -93,14 +104,28 @@ void Initialize() {
     InitializeHook();
 }
 
+void Uninitialize() {
+    MH_DisableHook(MH_ALL_HOOKS);
+    MH_Uninitialize();
+    WriteConfig(GetConfigPath());
+}
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     DisableThreadLibraryCalls(hinstDLL);
 
-    if (fdwReason == DLL_PROCESS_ATTACH) {
+    switch (fdwReason) {
+    case DLL_PROCESS_ATTACH: {
         auto threadProc = reinterpret_cast<LPTHREAD_START_ROUTINE>(Initialize);
         auto handle = CreateThread(nullptr, 0, threadProc, nullptr, 0, nullptr);
         if (handle != nullptr)
             CloseHandle(handle);
+        break;
+    }
+    case DLL_PROCESS_DETACH: {
+        Uninitialize();
+        break;
+    }
+    default: break;
     }
 
     return TRUE;
