@@ -51,6 +51,8 @@ add_library(
     "src/config.h"
     "src/input.h"
     "src/input.cpp"
+    "src/filter.cpp"
+    "src/filter.h"
 )
 
 target_include_directories(
