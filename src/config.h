@@ -10,6 +10,8 @@ struct Config {
     int enableKey = VK_LEFT;
     int nextKey = VK_UP;
     int prevKey = VK_DOWN;
+    float smoothing = 0.1f;
+    float threshold = 4.0f;
 };
 
 void to_json(nlohmann::json& j, const Config& c) {
@@ -19,7 +21,9 @@ void to_json(nlohmann::json& j, const Config& c) {
         { "fov_presets", c.fovPresets },
         { "enable_key", c.enableKey },
         { "next_key", c.nextKey },
-        { "prev_key", c.prevKey }
+        { "prev_key", c.prevKey },
+        { "smoothing", c.smoothing },
+        { "threshold", c.threshold }
     };
 }
 
@@ -41,6 +45,9 @@ void from_json(const nlohmann::json& j, Config& c) {
         j.at("enable_key").get_to(c.enableKey);
         j.at("next_key").get_to(c.nextKey);
         j.at("prev_key").get_to(c.prevKey);
+
+        j.at("smoothing").get_to(c.smoothing);
+        j.at("threshold").get_to(c.threshold);
     } catch (const std::exception& e) {
         c = Config();
     }

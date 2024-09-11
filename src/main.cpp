@@ -1,72 +1,111 @@
+#include "main.h"
 #include "config.h"
+#include "filter.h"
 #include "hook.h"
 #include "input.h"
-#include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <memory>
-#include <windows.h>
-#include <nlohmann/json.hpp>
+#include <d3d11.h>
 
-typedef void(*SetFieldOfView)(void* instance, float value);
-SetFieldOfView setFieldOfView = nullptr;
+// TODO: REFACTOR
+// TODO: BETTER ERROR HANDLING
 
-std::unique_ptr<InputManager> inputManager;
-void OnKeyDown(int vKey);
+void InitializeConfig();
+void InitializeHooks();
+void InitializeInput();
+void InitializeFilter();
 
-void InitializeInput() {
-    inputManager = std::make_unique<InputManager>(
-        0, GetCurrentProcessId()
-    );
-    inputManager->RegisterOnKeyDown(OnKeyDown);
+int main() {
+    InitializeConfig();
+    InitializeHooks();
+    InitializeInput();
+    InitializeFilter();
 }
+
+// Config
 
 Config config;
+std::filesystem::path configPath;
 
-std::filesystem::path GetConfigPath() {
-    HMODULE module = nullptr;
-    GetModuleHandleExA(
-        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        reinterpret_cast<LPCTSTR>(&GetConfigPath),
-        &module
-    );
-    char modulePath[MAX_PATH];
-    GetModuleFileNameA(module, modulePath, MAX_PATH);
-    auto moduleDir = std::filesystem::path(modulePath).parent_path();
-    return moduleDir / "fov_config.json";
-}
-
-void WriteConfig(const std::filesystem::path& configPath) {
+void WriteConfig() {
     const nlohmann::json json = config;
     std::ofstream file(configPath);
     file << json.dump(4);
 }
 
-void ReadConfig(const std::filesystem::path& configPath) {
+void ReadConfig() {
+    if (!exists(configPath)) {
+        WriteConfig();
+        return;
+    }
     std::ifstream file(configPath);
     nlohmann::json json;
     file >> json;
     config = json.get<Config>();
 }
 
+std::filesystem::path GetConfigPath() {
+    HMODULE module = nullptr;
+    GetModuleHandleEx(
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        reinterpret_cast<LPCTSTR>(&GetConfigPath),
+        &module
+    );
+    char modulePath[MAX_PATH];
+    GetModuleFileName(module, modulePath, MAX_PATH);
+    auto moduleDir = std::filesystem::path(modulePath).parent_path();
+    return moduleDir / "fov_config.json";
+}
+
 void InitializeConfig() {
-    const auto configPath = GetConfigPath();
-    if (std::filesystem::exists(configPath)) {
-        ReadConfig(configPath);
-    } else {
-        WriteConfig(configPath);
-    }
+    configPath = GetConfigPath();
+    ReadConfig();
 }
 
-std::unique_ptr<Hook> hook;
+// Hooks
 
-void HkSetFieldOfView(void* _this, float value) {
-    inputManager->Poll();
-    if (value == 45.0f && config.enabled)
-        value = static_cast<float>(config.fov);
-    setFieldOfView(_this, value);
+typedef void(*SetFovPtr)(void* instance, float value);
+SetFovPtr SetFov;
+std::unique_ptr<Hook> setFovHook;
+void HkSetFov(void* instance, float value);
+
+void InitializeHooks() {
+    // SetFov hook
+    auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
+    auto offset = GetModuleHandle("GenshinImpact.exe") ? 0x165a1d0 : 0x165f1d0;
+    SetFov = reinterpret_cast<SetFovPtr>(module + offset);
+    setFovHook = std::make_unique<Hook>(
+        reinterpret_cast<void**>(&SetFov),
+        reinterpret_cast<void*>(HkSetFov)
+    );
 }
+
+// Input
+
+std::unique_ptr<InputManager> input;
+void OnKeyDown(int vKey);
+
+void InitializeInput() {
+    input = std::make_unique<InputManager>(0, GetCurrentProcessId());
+    input->RegisterOnKeyDown(OnKeyDown);
+}
+
+// Filter
+
+std::unique_ptr<ExponentialFilter> filter;
+
+void InitializeFilter() {
+    const auto timeConstant = config.smoothing;
+    filter = std::make_unique<ExponentialFilter>(timeConstant);
+}
+
+// Logic
+
+int setFovCount = 0;
+uintptr_t firstInstance = 0;
+float firstSetFov = 0.0f;
+std::chrono::time_point<std::chrono::steady_clock> previousTime;
 
 void OnKeyDown(int vKey) {
     if (vKey == config.nextKey && config.enabled) {
@@ -90,40 +129,28 @@ void OnKeyDown(int vKey) {
     }
 }
 
-void InitializeHook() {
-    auto module = reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr));
-    auto offset = GetModuleHandleA("GenshinImpact.exe") ? 0x165a1d0 : 0x165f1d0;
-    setFieldOfView = reinterpret_cast<SetFieldOfView>(module + offset);
-    hook = std::make_unique<Hook>(reinterpret_cast<void**>(&setFieldOfView), HkSetFieldOfView);
-}
-
-void Initialize() {
-    InitializeConfig();
-    InitializeInput();
-    InitializeHook();
-}
-
-void Uninitialize() {
-    WriteConfig(GetConfigPath());
-}
-
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
-    DisableThreadLibraryCalls(hinstDLL);
-
-    switch (fdwReason) {
-    case DLL_PROCESS_ATTACH: {
-        auto threadProc = reinterpret_cast<LPTHREAD_START_ROUTINE>(Initialize);
-        auto handle = CreateThread(nullptr, 0, threadProc, nullptr, 0, nullptr);
-        if (handle != nullptr)
-            CloseHandle(handle);
-        break;
-    }
-    case DLL_PROCESS_DETACH: {
-        Uninitialize();
-        break;
-    }
-    default: break;
+void HkSetFov(void* instance, float value) {
+    const auto currentTime = std::chrono::steady_clock::now();
+    const auto deltaTime = std::chrono::duration<float, std::milli>(
+        currentTime - previousTime).count();
+    if (deltaTime > config.threshold) {
+        if (setFovCount == 1) {
+            filter->SetInitialValue(firstSetFov);
+        }
+        previousTime = currentTime;
+        setFovCount = 0;
     }
 
-    return TRUE;
+    input->Poll();
+
+    const auto currentInstance = reinterpret_cast<uintptr_t>(instance);
+    if (setFovCount == 0) {
+        firstInstance = currentInstance;
+        firstSetFov = value;
+    } else if (setFovCount == 1 &&currentInstance == firstInstance) {
+        value = filter->Update(static_cast<float>(config.fov));
+    }
+    setFovCount++;
+
+    SetFov(instance, value);
 }
