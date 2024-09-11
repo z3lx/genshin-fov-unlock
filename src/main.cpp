@@ -1,12 +1,15 @@
 #include "config.h"
+#include "hook.h"
 #include "input.h"
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <windows.h>
-#include <MinHook.h>
 #include <nlohmann/json.hpp>
+
+typedef void(*SetFieldOfView)(void* instance, float value);
+SetFieldOfView setFieldOfView = nullptr;
 
 std::unique_ptr<InputManager> inputManager;
 void OnKeyDown(int vKey);
@@ -56,13 +59,13 @@ void InitializeConfig() {
     }
 }
 
-void* trampoline = nullptr;
+std::unique_ptr<Hook> hook;
 
-void SetFieldOfView(void* _this, float value) {
+void HkSetFieldOfView(void* _this, float value) {
     inputManager->Poll();
     if (value == 45.0f && config.enabled)
         value = static_cast<float>(config.fov);
-    reinterpret_cast<decltype(&SetFieldOfView)>(trampoline)(_this, value);
+    setFieldOfView(_this, value);
 }
 
 void OnKeyDown(int vKey) {
@@ -90,12 +93,8 @@ void OnKeyDown(int vKey) {
 void InitializeHook() {
     auto module = reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr));
     auto offset = GetModuleHandleA("GenshinImpact.exe") ? 0x165a1d0 : 0x165f1d0;
-    auto target = reinterpret_cast<void*>(module + offset);
-    auto detour = reinterpret_cast<void*>(&SetFieldOfView);
-
-    MH_Initialize();
-    MH_CreateHook(target, detour, &trampoline);
-    MH_EnableHook(MH_ALL_HOOKS);
+    setFieldOfView = reinterpret_cast<SetFieldOfView>(module + offset);
+    hook = std::make_unique<Hook>(reinterpret_cast<void**>(&setFieldOfView), HkSetFieldOfView);
 }
 
 void Initialize() {
@@ -105,8 +104,6 @@ void Initialize() {
 }
 
 void Uninitialize() {
-    MH_DisableHook(MH_ALL_HOOKS);
-    MH_Uninitialize();
     WriteConfig(GetConfigPath());
 }
 

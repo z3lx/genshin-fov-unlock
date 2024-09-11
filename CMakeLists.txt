@@ -53,6 +53,8 @@ add_library(
     "src/input.cpp"
     "src/filter.cpp"
     "src/filter.h"
+    "src/hook.cpp"
+    "src/hook.h"
 )
 
 target_include_directories(
