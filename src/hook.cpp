@@ -11,7 +11,9 @@ struct Hook::Impl {
 
 int Hook::Impl::count = 0;
 
-Hook::Impl::Impl(void** target, void* detour) : target(*target) {
+Hook::Impl::Impl(
+    void** target, void* detour
+) : target(*target) {
     if (count++ == 0) {
         MH_Initialize();
     }
@@ -26,7 +28,10 @@ Hook::Impl::~Impl() {
     }
 }
 
-Hook::Hook(void** target, void* detour)
-: impl(std::make_unique<Impl>(target, detour)) { }
+Hook::Hook(
+    void** target, void* detour
+) : impl(new Impl(target, detour)) { }
 
-Hook::~Hook() = default;
+Hook::~Hook() {
+    delete impl;
+}

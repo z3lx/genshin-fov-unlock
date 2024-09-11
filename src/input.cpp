@@ -147,10 +147,11 @@ void InputManager::Impl::TriggerOnKeyUp(const int vKey) const {
 InputManager::InputManager(
     const int pollingRate,
     const DWORD process
-) : impl(std::make_unique<Impl>(pollingRate, process)) {
-}
+) : impl(new Impl(pollingRate, process)) { }
 
-InputManager::~InputManager() = default;
+InputManager::~InputManager() {
+    delete impl;
+}
 
 void InputManager::SetTrackedProcess(const DWORD process) const {
     impl->SetTrackedProcess(process);

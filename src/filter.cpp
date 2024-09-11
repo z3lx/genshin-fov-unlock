@@ -1,5 +1,6 @@
 #include "filter.h"
 #include <chrono>
+#include <cmath>
 
 namespace chrono = std::chrono;
 
@@ -56,10 +57,11 @@ float ExponentialFilter::Impl::Update(const float value) {
 ExponentialFilter::ExponentialFilter(
     const float timeConstant,
     const float initialValue
-) : impl(std::make_unique<Impl>(timeConstant, initialValue)) {
-}
+) : impl(new Impl(timeConstant, initialValue)) { }
 
-ExponentialFilter::~ExponentialFilter() = default;
+ExponentialFilter::~ExponentialFilter() {
+    delete impl;
+}
 
 void ExponentialFilter::SetInitialValue(const float value) {
     impl->SetInitialValue(value);

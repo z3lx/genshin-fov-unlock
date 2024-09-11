@@ -1,17 +1,13 @@
 #pragma once
 
 #include <functional>
-#include <memory>
 #include <windows.h>
 
 class InputManager {
 public:
     using KeyEventCallback = std::function<void(int)>;
 
-    explicit InputManager(
-        int pollingRate = 0,
-        DWORD process = 0
-    );
+    explicit InputManager(int pollingRate = 0, DWORD process = 0);
     ~InputManager();
 
     void SetTrackedProcess(DWORD process) const;
@@ -24,5 +20,5 @@ public:
 
 private:
     struct Impl;
-    std::unique_ptr<Impl> impl;
+    Impl* impl;
 };

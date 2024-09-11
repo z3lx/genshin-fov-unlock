@@ -3,9 +3,12 @@
 #include "filter.h"
 #include "hook.h"
 #include "input.h"
+#include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <d3d11.h>
+#include <memory>
+#include <nlohmann/json.hpp>
+#include <windows.h>
 
 // TODO: REFACTOR
 // TODO: BETTER ERROR HANDLING
@@ -27,21 +30,27 @@ int main() {
 Config config;
 std::filesystem::path configPath;
 
-void WriteConfig() {
+void WriteConfig(
+    const Config& config,
+    const std::filesystem::path& configPath
+) {
     const nlohmann::json json = config;
     std::ofstream file(configPath);
     file << json.dump(4);
 }
 
-void ReadConfig() {
+Config ReadConfig(
+    const std::filesystem::path& configPath
+) {
     if (!exists(configPath)) {
-        WriteConfig();
-        return;
+        Config config {};
+        WriteConfig(config, configPath);
+        return config;
     }
     std::ifstream file(configPath);
     nlohmann::json json;
     file >> json;
-    config = json.get<Config>();
+    return json.get<Config>();
 }
 
 std::filesystem::path GetConfigPath() {
@@ -54,13 +63,13 @@ std::filesystem::path GetConfigPath() {
     );
     char modulePath[MAX_PATH];
     GetModuleFileName(module, modulePath, MAX_PATH);
-    auto moduleDir = std::filesystem::path(modulePath).parent_path();
+    const auto moduleDir = std::filesystem::path(modulePath).parent_path();
     return moduleDir / "fov_config.json";
 }
 
 void InitializeConfig() {
     configPath = GetConfigPath();
-    ReadConfig();
+    config = ReadConfig(configPath);
 }
 
 // Hooks
@@ -71,9 +80,9 @@ std::unique_ptr<Hook> setFovHook;
 void HkSetFov(void* instance, float value);
 
 void InitializeHooks() {
-    // SetFov hook
-    auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
-    auto offset = GetModuleHandle("GenshinImpact.exe") ? 0x165a1d0 : 0x165f1d0;
+    const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
+    const auto isGlobal = GetModuleHandle("GenshinImpact.exe") != nullptr;
+    const auto offset = isGlobal ? 0x165a1d0 : 0x165f1d0;
     SetFov = reinterpret_cast<SetFovPtr>(module + offset);
     setFovHook = std::make_unique<Hook>(
         reinterpret_cast<void**>(&SetFov),
@@ -104,10 +113,10 @@ void InitializeFilter() {
 
 int setFovCount = 0;
 uintptr_t firstInstance = 0;
-float firstSetFov = 0.0f;
+float firstFov = 0.0f;
 std::chrono::time_point<std::chrono::steady_clock> previousTime;
 
-void OnKeyDown(int vKey) {
+void OnKeyDown(const int vKey) {
     if (vKey == config.nextKey && config.enabled) {
         for (auto i = 0; i < config.fovPresets.size(); ++i) {
             if (const auto presetFov = config.fovPresets[i];
@@ -135,7 +144,7 @@ void HkSetFov(void* instance, float value) {
         currentTime - previousTime).count();
     if (deltaTime > config.threshold) {
         if (setFovCount == 1) {
-            filter->SetInitialValue(firstSetFov);
+            filter->SetInitialValue(firstFov);
         }
         previousTime = currentTime;
         setFovCount = 0;
@@ -146,8 +155,8 @@ void HkSetFov(void* instance, float value) {
     const auto currentInstance = reinterpret_cast<uintptr_t>(instance);
     if (setFovCount == 0) {
         firstInstance = currentInstance;
-        firstSetFov = value;
-    } else if (setFovCount == 1 &&currentInstance == firstInstance) {
+        firstFov = value;
+    } else if (setFovCount == 1 && currentInstance == firstInstance) {
         value = filter->Update(static_cast<float>(config.fov));
     }
     setFovCount++;

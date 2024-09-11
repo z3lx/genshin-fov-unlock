@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 class Hook {
 public:
     Hook(void** target, void* detour);
@@ -9,5 +7,5 @@ public:
 
 private:
     struct Impl;
-    std::unique_ptr<Impl> impl;
+    Impl* impl;
 };

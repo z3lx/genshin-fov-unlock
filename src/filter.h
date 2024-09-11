@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 class ExponentialFilter {
 public:
     explicit ExponentialFilter(
@@ -15,5 +13,5 @@ public:
 
 private:
     struct Impl;
-    std::unique_ptr<Impl> impl;
+    Impl* impl;
 };
