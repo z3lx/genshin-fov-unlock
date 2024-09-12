@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <xutility>
 #include <nlohmann/json.hpp>
 #include <windows.h>
 
@@ -124,21 +125,19 @@ std::chrono::time_point<std::chrono::steady_clock> previousTime;
 
 void OnKeyDown(const int vKey) {
     if (vKey == config.nextKey && config.enabled) {
-        for (auto i = 0; i < config.fovPresets.size(); ++i) {
-            if (const auto presetFov = config.fovPresets[i];
-                config.fov < presetFov) {
-                config.fov = presetFov;
-                break;
-            }
-        }
+        const auto it = std::ranges::find_if(
+            config.fovPresets,
+            [&](const int presetFov) { return config.fov < presetFov; }
+        );
+        config.fov = it != config.fovPresets.end()
+            ? *it : config.fovPresets.front();
     } else if (vKey == config.prevKey && config.enabled) {
-        for (auto i = config.fovPresets.size(); i > 0; --i) {
-            if (const auto presetFov = config.fovPresets[i - 1];
-                config.fov > presetFov) {
-                config.fov = presetFov;
-                break;
-            }
-        }
+        const auto it = std::ranges::find_if(
+            config.fovPresets | std::views::reverse,
+            [&](const int presetFov) { return config.fov > presetFov; }
+        );
+        config.fov = it != config.fovPresets.rend()
+            ? *it : config.fovPresets.back();
     } else if (vKey == config.enableKey) {
         config.enabled = !config.enabled;
     }
