@@ -34,7 +34,7 @@ void WriteConfig(
     const Config& config,
     const std::filesystem::path& configPath
 ) {
-    const nlohmann::json json = config;
+    const nlohmann::ordered_json json = config;
     std::ofstream file(configPath);
     file << json.dump(4);
 }
