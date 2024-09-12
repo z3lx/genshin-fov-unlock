@@ -96,7 +96,8 @@ std::unique_ptr<InputManager> input;
 void OnKeyDown(int vKey);
 
 void InitializeInput() {
-    input = std::make_unique<InputManager>(0, GetCurrentProcessId());
+    const auto trackedProcess = GetCurrentProcessId();
+    input = std::make_unique<InputManager>(trackedProcess);
     input->RegisterOnKeyDown(OnKeyDown);
 }
 
