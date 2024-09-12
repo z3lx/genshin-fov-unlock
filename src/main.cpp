@@ -4,6 +4,7 @@
 #include "hook.h"
 #include "input.h"
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -120,7 +121,7 @@ void InitializeFilter() {
 
 int setFovCount = 0;
 uintptr_t firstInstance = 0;
-float firstFov = 0.0f;
+float firstFov = 0;
 std::chrono::time_point<std::chrono::steady_clock> previousTime;
 
 void OnKeyDown(const int vKey) {
@@ -150,26 +151,42 @@ void HkSetFov(void* instance, float value) {
     if (deltaTime > config.threshold) {
         input->Poll();
 
-        if (setFovCount == 1 || !config.enabled) {
+        if (setFovCount == 1) {
             filter->SetInitialValue(firstFov);
         }
         previousTime = currentTime;
         setFovCount = 0;
     }
 
+    setFovCount++;
     const auto currentInstance = reinterpret_cast<uintptr_t>(instance);
     switch (setFovCount) {
-    case 0:
-        firstInstance = currentInstance;
-        firstFov = value;
-        break;
-    case 1:
-        if (currentInstance == firstInstance && config.enabled) {
-            value = filter->Update(static_cast<float>(config.fov));
+        case 1: {
+            firstInstance = currentInstance;
+            firstFov = value;
+            break;
         }
-        break;
+        case 2: {
+            if (currentInstance != firstInstance) {
+                break;
+            }
+
+            const auto target = config.enabled
+                ? static_cast<float>(config.fov) : value;
+            const auto filtered = filter->Update(target);
+            const auto isOnTarget = std::abs(filtered - target) < 0.1;
+
+            if (config.enabled || !isOnTarget) {
+                value = filtered;
+            } else {
+                filter->SetInitialValue(firstFov);
+            }
+            break;
+        }
+        default: {
+            break;
+        }
     }
-    setFovCount++;
 
     SetFov(instance, value);
 }
