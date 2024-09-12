@@ -7,11 +7,11 @@ struct Config {
     bool enabled = true;
     int fov = 75;
     std::vector<int> fovPresets = { 30, 45, 60, 75, 90, 110 };
-    float smoothing = 0.1;
+    float smoothing = 0.2;
     float threshold = 4.0;
-    int enableKey = VK_LEFT;
-    int nextKey = VK_DOWN;
-    int prevKey = VK_UP;
+    int enableKey = VK_DOWN;
+    int nextKey = VK_RIGHT;
+    int prevKey = VK_LEFT;
 };
 
 void to_json(nlohmann::ordered_json& j, const Config& c) {
