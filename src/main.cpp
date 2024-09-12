@@ -149,21 +149,26 @@ void HkSetFov(void* instance, float value) {
     const auto deltaTime = std::chrono::duration<float, std::milli>(
         currentTime - previousTime).count();
     if (deltaTime > config.threshold) {
-        if (setFovCount == 1) {
+        input->Poll();
+
+        if (setFovCount == 1 || !config.enabled) {
             filter->SetInitialValue(firstFov);
         }
         previousTime = currentTime;
         setFovCount = 0;
     }
 
-    input->Poll();
-
     const auto currentInstance = reinterpret_cast<uintptr_t>(instance);
-    if (setFovCount == 0) {
+    switch (setFovCount) {
+    case 0:
         firstInstance = currentInstance;
         firstFov = value;
-    } else if (setFovCount == 1 && currentInstance == firstInstance) {
-        value = filter->Update(static_cast<float>(config.fov));
+        break;
+    case 1:
+        if (currentInstance == firstInstance && config.enabled) {
+            value = filter->Update(static_cast<float>(config.fov));
+        }
+        break;
     }
     setFovCount++;
 
