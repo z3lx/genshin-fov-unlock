@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <initializer_list>
 #include <windows.h>
 
 class InputManager {
@@ -11,6 +12,7 @@ public:
     ~InputManager();
 
     void SetTrackedProcess(DWORD process);
+    void RegisterKeys(std::initializer_list<int> vKeys);
     void RegisterOnKeyDown(const KeyEventCallback& callback);
     void RegisterOnKeyUp(const KeyEventCallback& callback);
     void Poll() const;

@@ -1,6 +1,8 @@
 #include "input.h"
 #include <chrono>
 #include <functional>
+#include <initializer_list>
+#include <set>
 #include <unordered_map>
 #include <vector>
 #include <windows.h>
@@ -11,6 +13,7 @@ struct InputManager::Impl {
     explicit Impl(DWORD process);
 
     void SetTrackedProcess(DWORD process);
+    void RegisterKeys(std::initializer_list<int> vKeys);
     void RegisterOnKeyDown(const KeyEventCallback& callback);
     void RegisterOnKeyUp(const KeyEventCallback& callback);
     void Poll();
@@ -19,6 +22,7 @@ struct InputManager::Impl {
     void TriggerOnKeyUp(int vKey) const;
 
     DWORD trackedProcess;
+    std::set<int> registeredKeys;
     std::unordered_map<int, bool> keyStates;
     std::vector<KeyEventCallback> onKeyDownCallbacks;
     std::vector<KeyEventCallback> onKeyUpCallbacks;
@@ -37,15 +41,17 @@ void InputManager::Impl::SetTrackedProcess(const DWORD process) {
     trackedProcess = process;
 }
 
-void InputManager::Impl::RegisterOnKeyDown(
-    const KeyEventCallback& callback
-) {
+void InputManager::Impl::RegisterKeys(const std::initializer_list<int> vKeys) {
+    for (const auto& key : vKeys) {
+        registeredKeys.insert(key);
+    }
+}
+
+void InputManager::Impl::RegisterOnKeyDown(const KeyEventCallback& callback) {
     onKeyDownCallbacks.push_back(callback);
 }
 
-void InputManager::Impl::RegisterOnKeyUp(
-    const KeyEventCallback& callback
-) {
+void InputManager::Impl::RegisterOnKeyUp(const KeyEventCallback& callback) {
     onKeyUpCallbacks.push_back(callback);
 }
 
@@ -57,16 +63,16 @@ void InputManager::Impl::Poll() {
         return;
     }
 
-    for (int vKey = 0x01; vKey <= 0xFE; ++vKey) {
-        if (GetAsyncKeyState(vKey) & 0x8000) {
-            if (!keyStates[vKey]) {
-                keyStates[vKey] = true;
-                TriggerOnKeyDown(vKey);
+    for (const auto key : registeredKeys) {
+        if (GetAsyncKeyState(key) & 0x8000) {
+            if (!keyStates[key]) {
+                keyStates[key] = true;
+                TriggerOnKeyDown(key);
             }
         } else {
-            if (keyStates[vKey]) {
-                keyStates[vKey] = false;
-                TriggerOnKeyUp(vKey);
+            if (keyStates[key]) {
+                keyStates[key] = false;
+                TriggerOnKeyUp(key);
             }
         }
     }
@@ -94,6 +100,10 @@ InputManager::~InputManager() {
 
 void InputManager::SetTrackedProcess(const DWORD process) {
     impl->SetTrackedProcess(process);
+}
+
+void InputManager::RegisterKeys(const std::initializer_list<int> vKeys) {
+    impl->RegisterKeys(vKeys);
 }
 
 void InputManager::RegisterOnKeyDown(const KeyEventCallback& callback) {

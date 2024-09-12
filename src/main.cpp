@@ -98,6 +98,11 @@ void OnKeyDown(int vKey);
 void InitializeInput() {
     const auto trackedProcess = GetCurrentProcessId();
     input = std::make_unique<InputManager>(trackedProcess);
+    input->RegisterKeys({
+        config.enableKey,
+        config.nextKey,
+        config.prevKey
+    });
     input->RegisterOnKeyDown(OnKeyDown);
 }
 
