@@ -8,8 +8,8 @@ struct Config {
     int fov = 75;
     std::vector<int> fovPresets = { 30, 45, 60, 75, 90, 110 };
     int enableKey = VK_LEFT;
-    int nextKey = VK_UP;
-    int prevKey = VK_DOWN;
+    int nextKey = VK_DOWN;
+    int prevKey = VK_UP;
     float smoothing = 0.1f;
     float threshold = 4.0f;
 };
