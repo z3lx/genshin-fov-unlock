@@ -1,78 +1,192 @@
-#include <cstdint>
+#include "main.h"
+#include "config.h"
+#include "filter.h"
+#include "hook.h"
+#include "input.h"
+#include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <memory>
+#include <xutility>
+#include <nlohmann/json.hpp>
 #include <windows.h>
 
-#include <MinHook.h>
-#include <nlohmann/json.hpp>
+// TODO: REFACTOR
+// TODO: BETTER ERROR HANDLING
 
-float fieldOfView = 0;
+void InitializeConfig();
+void InitializeHooks();
+void InitializeInput();
+void InitializeFilter();
 
-void InitializeConfig() {
+int main() {
+    InitializeConfig();
+    InitializeHooks();
+    InitializeInput();
+    InitializeFilter();
+}
+
+// Config
+
+Config config;
+std::filesystem::path configPath;
+
+void WriteConfig(
+    const Config& config,
+    const std::filesystem::path& configPath
+) {
+    const nlohmann::ordered_json json = config;
+    std::ofstream file(configPath);
+    file << json.dump(4);
+}
+
+Config ReadConfig(
+    const std::filesystem::path& configPath
+) {
+    if (!exists(configPath)) {
+        Config config {};
+        WriteConfig(config, configPath);
+        return config;
+    }
+    std::ifstream file(configPath);
+    nlohmann::json json;
+    file >> json;
+    return json.get<Config>();
+}
+
+std::filesystem::path GetConfigPath() {
     HMODULE module = nullptr;
-    GetModuleHandleExA(
+    GetModuleHandleEx(
         GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        reinterpret_cast<LPCTSTR>(&InitializeConfig),
+        reinterpret_cast<LPCTSTR>(&GetConfigPath),
         &module
     );
     char modulePath[MAX_PATH];
-    GetModuleFileNameA(module, modulePath, MAX_PATH);
-    auto moduleDir = std::filesystem::path(modulePath).parent_path();
-    auto configPath = moduleDir / "fov_config.json";
+    GetModuleFileName(module, modulePath, MAX_PATH);
+    const auto moduleDir = std::filesystem::path(modulePath).parent_path();
+    return moduleDir / "fov_config.json";
+}
 
-    constexpr auto key = "field_of_view";
-    constexpr auto value = 90.0f;
+void InitializeConfig() {
+    configPath = GetConfigPath();
+    config = ReadConfig(configPath);
+}
 
-    if (std::filesystem::exists(configPath)) {
-        std::ifstream file(configPath);
-        nlohmann::json config;
-        file >> config;
-        fieldOfView = config.value(key, value);
-        if (fieldOfView < 1.0f || fieldOfView > 179.0f)
-            fieldOfView = value;
-    } else {
-        nlohmann::json config;
-        config[key] = value;
-        std::ofstream file(configPath);
-        file << config.dump(4);
-        fieldOfView = value;
+// Hooks
+
+typedef void(*SetFovPtr)(void* instance, float value);
+SetFovPtr SetFov;
+std::unique_ptr<Hook> setFovHook;
+void HkSetFov(void* instance, float value);
+
+void InitializeHooks() {
+    const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
+    const auto isGlobal = GetModuleHandle("GenshinImpact.exe") != nullptr;
+    const auto offset = isGlobal ? 0x165a1d0 : 0x165f1d0;
+    SetFov = reinterpret_cast<SetFovPtr>(module + offset);
+    setFovHook = std::make_unique<Hook>(
+        reinterpret_cast<void**>(&SetFov),
+        reinterpret_cast<void*>(HkSetFov)
+    );
+}
+
+// Input
+
+std::unique_ptr<InputManager> input;
+void OnKeyDown(int vKey);
+
+void InitializeInput() {
+    const auto trackedProcess = GetCurrentProcessId();
+    input = std::make_unique<InputManager>(trackedProcess);
+    input->RegisterKeys({
+        config.enableKey,
+        config.nextKey,
+        config.prevKey
+    });
+    input->RegisterOnKeyDown(OnKeyDown);
+}
+
+// Filter
+
+std::unique_ptr<ExponentialFilter> filter;
+
+void InitializeFilter() {
+    const auto timeConstant = config.smoothing;
+    filter = std::make_unique<ExponentialFilter>(timeConstant);
+}
+
+// Logic
+
+int setFovCount = 0;
+uintptr_t firstInstance = 0;
+float firstFov = 0;
+std::chrono::time_point<std::chrono::steady_clock> previousTime;
+
+void OnKeyDown(const int vKey) {
+    if (vKey == config.nextKey && config.enabled) {
+        const auto it = std::ranges::find_if(
+            config.fovPresets,
+            [&](const int presetFov) { return config.fov < presetFov; }
+        );
+        config.fov = it != config.fovPresets.end()
+            ? *it : config.fovPresets.front();
+    } else if (vKey == config.prevKey && config.enabled) {
+        const auto it = std::ranges::find_if(
+            config.fovPresets | std::views::reverse,
+            [&](const int presetFov) { return config.fov > presetFov; }
+        );
+        config.fov = it != config.fovPresets.rend()
+            ? *it : config.fovPresets.back();
+    } else if (vKey == config.enableKey) {
+        config.enabled = !config.enabled;
     }
 }
 
-void* trampoline = nullptr;
+void HkSetFov(void* instance, float value) {
+    const auto currentTime = std::chrono::steady_clock::now();
+    const auto deltaTime = std::chrono::duration<float, std::milli>(
+        currentTime - previousTime).count();
+    if (deltaTime > config.threshold) {
+        input->Poll();
 
-void SetFieldOfView(void* _this, float value) {
-    if (value == 45.0f)
-        value = fieldOfView;
-    reinterpret_cast<decltype(&SetFieldOfView)>(trampoline)(_this, value);
-}
-
-void InitializeHook() {
-    auto module = reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr));
-    auto offset = GetModuleHandleA("GenshinImpact.exe") ? 0x165a1d0 : 0x165f1d0;
-    auto target = reinterpret_cast<void*>(module + offset);
-    auto detour = reinterpret_cast<void*>(&SetFieldOfView);
-
-    MH_Initialize();
-    MH_CreateHook(target, detour, &trampoline);
-    MH_EnableHook(MH_ALL_HOOKS);
-}
-
-void Initialize() {
-    InitializeConfig();
-    InitializeHook();
-}
-
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
-    DisableThreadLibraryCalls(hinstDLL);
-
-    if (fdwReason == DLL_PROCESS_ATTACH) {
-        auto threadProc = reinterpret_cast<LPTHREAD_START_ROUTINE>(Initialize);
-        auto handle = CreateThread(nullptr, 0, threadProc, nullptr, 0, nullptr);
-        if (handle != nullptr)
-            CloseHandle(handle);
+        if (setFovCount == 1) {
+            filter->SetInitialValue(firstFov);
+        }
+        previousTime = currentTime;
+        setFovCount = 0;
     }
 
-    return TRUE;
+    setFovCount++;
+    const auto currentInstance = reinterpret_cast<uintptr_t>(instance);
+    switch (setFovCount) {
+        case 1: {
+            firstInstance = currentInstance;
+            firstFov = value;
+            break;
+        }
+        case 2: {
+            if (currentInstance != firstInstance) {
+                break;
+            }
+
+            const auto target = config.enabled
+                ? static_cast<float>(config.fov) : value;
+            const auto filtered = filter->Update(target);
+            const auto isOnTarget = std::abs(filtered - target) < 0.1;
+
+            if (config.enabled || !isOnTarget) {
+                value = filtered;
+            } else {
+                filter->SetInitialValue(firstFov);
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    SetFov(instance, value);
 }

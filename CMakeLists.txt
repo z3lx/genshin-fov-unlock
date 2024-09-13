@@ -47,7 +47,16 @@ download_and_extract(
 add_library(
     genshin_fov_unlock
     SHARED
+    "src/dllmain.cpp"
+    "src/main.h"
     "src/main.cpp"
+    "src/config.h"
+    "src/input.h"
+    "src/input.cpp"
+    "src/filter.h"
+    "src/filter.cpp"
+    "src/hook.cpp"
+    "src/hook.h"
 )
 
 target_include_directories(
