@@ -2,7 +2,7 @@
 ![GitHub all releases](https://img.shields.io/github/downloads/z3lx/genshin-fov-unlock/total)
 
 # Genshin Impact FOV Unlocker
-A plugin for Genshin Impact that unlocks the camera's field of view (FOV) to values greater than the default of 45. It includes a DLL designed to be used in conjunction with [`genshin-fps-unlock`](https://github.com/34736384/genshin-fps-unlock).
+A plugin for Genshin Impact that unlocks the camera's field of view (FOV) to values greater than the default of 45. It includes a DLL designed to be used in conjunction with [`genshin-fps-unlock`](https://github.com/34736384/genshin-fps-unlock). If you find the plugin useful, consider starring the repository 🌟!
 
 https://github.com/user-attachments/assets/56a11762-ebd2-4093-8c1d-768f913bd063
 
@@ -32,7 +32,7 @@ The plugin's behavior and settings can optionally be customized through the `fov
 - `enabled` (bool): Default state of the plugin when the game starts.
 - `fov` (int): Default FOV to use when the game starts.
 - `fov_presets` (array of int): List of FOV values to cycle through using keybindings.
-- `smoothing` (float): Time constant in seconds for the exponential filter. Lower values makes the FOV changes more responsive.
+- `smoothing` (float): Time constant in seconds for the exponential filter. Lower values make the FOV changes more responsive.
 - `threshold` (float): Time in milliseconds to use as a threshold for frame counting. An incorrect value may cause the FOV to fluctuate or not change at all. Default of 4 ms should work for most systems as long as the FPS cap is not above 200.
 - `enable_key` (int): Key to enable or disable the plugin.
 - `next_key` (int): Key to cycle to the next FOV preset.
