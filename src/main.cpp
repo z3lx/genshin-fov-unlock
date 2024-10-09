@@ -84,7 +84,7 @@ void HkSetFov(void* instance, float value);
 void InitializeHooks() {
     const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
     const auto isGlobal = GetModuleHandle("GenshinImpact.exe") != nullptr;
-    const auto offset = isGlobal ? 0x165a1d0 : 0x165f1d0;
+    const auto offset = isGlobal ? 0x1136f30 : 0x1136d30;
     SetFov = reinterpret_cast<SetFovPtr>(module + offset);
     setFovHook = std::make_unique<Hook>(
         reinterpret_cast<void**>(&SetFov),
