@@ -32,8 +32,9 @@ The plugin's behavior and settings can optionally be customized through the `fov
 - `enabled` (bool): Default state of the plugin when the game starts.
 - `fov` (int): Default FOV to use when the game starts.
 - `fov_presets` (array of int): List of FOV values to cycle through using keybindings.
+- `interpolate` (bool): Whether to interpolate FOV changes from cycling through presets, character bursts, or other sources. Smoothing and threshold settings are used when interpolation is enabled.
 - `smoothing` (float): Time constant in seconds for the exponential filter. Lower values make the FOV changes more responsive.
-- `threshold` (float): Time in milliseconds to use as a threshold for frame counting. An incorrect value may cause the FOV to fluctuate or not change at all. Default of 4 ms should work for most systems as long as the FPS cap is not above 200.
+- `threshold` (float): Time in milliseconds to use as a threshold for frame counting. An incorrect value may cause the FOV to fluctuate or not change at all. Default of 4 ms should work for most systems. See [this issue](https://github.com/z3lx/genshin-fov-unlock/issues/2).
 - `enable_key` (int): Key to enable or disable the plugin.
 - `next_key` (int): Key to cycle to the next FOV preset.
 - `prev_key` (int): Key to cycle to the previous FOV preset.
@@ -54,6 +55,7 @@ The default configuration is as follows:
         90,
         110
     ],
+    "interpolate": true,
     "smoothing": 0.2,
     "threshold": 4.0,
     "enable_key": 40,
