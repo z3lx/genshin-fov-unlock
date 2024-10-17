@@ -145,6 +145,15 @@ void OnKeyDown(const int vKey) {
 }
 
 void HkSetFov(void* instance, float value) {
+    if (!config.interpolate) {
+        input->Poll();
+        if (value == 45.0 && config.enabled) {
+            value = static_cast<float>(config.fov);
+        }
+        SetFov(instance, value);
+        return;
+    }
+
     const auto currentTime = std::chrono::steady_clock::now();
     const auto deltaTime = std::chrono::duration<float, std::milli>(
         currentTime - previousTime).count();
