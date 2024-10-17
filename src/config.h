@@ -7,8 +7,11 @@ struct Config {
     bool enabled = true;
     int fov = 75;
     std::vector<int> fovPresets = { 30, 45, 60, 75, 90, 110 };
+
+    bool interpolate = true;
     float smoothing = 0.2;
     float threshold = 4.0;
+
     int enableKey = VK_DOWN;
     int nextKey = VK_RIGHT;
     int prevKey = VK_LEFT;
@@ -19,6 +22,7 @@ void to_json(nlohmann::ordered_json& j, const Config& c) {
         { "enabled", c.enabled },
         { "fov", c.fov },
         { "fov_presets", c.fovPresets },
+        { "interpolate", c.interpolate },
         { "smoothing", c.smoothing },
         { "threshold", c.threshold },
         { "enable_key", c.enableKey },
@@ -41,6 +45,7 @@ void from_json(const nlohmann::ordered_json& j, Config& c) try {
     std::ranges::sort(presets);
     c.fovPresets = presets;
 
+    j.at("interpolate").get_to(c.interpolate);
     j.at("smoothing").get_to(c.smoothing);
     j.at("threshold").get_to(c.threshold);
     j.at("enable_key").get_to(c.enableKey);
