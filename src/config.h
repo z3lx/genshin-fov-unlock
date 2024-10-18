@@ -12,6 +12,7 @@ struct Config {
     float smoothing = 0.2;
     float threshold = 4.0;
 
+    int hookKey = VK_UP;
     int enableKey = VK_DOWN;
     int nextKey = VK_RIGHT;
     int prevKey = VK_LEFT;
@@ -25,6 +26,7 @@ void to_json(nlohmann::ordered_json& j, const Config& c) {
         { "interpolate", c.interpolate },
         { "smoothing", c.smoothing },
         { "threshold", c.threshold },
+        { "hook_key", c.hookKey },
         { "enable_key", c.enableKey },
         { "next_key", c.nextKey },
         { "prev_key", c.prevKey }
@@ -48,6 +50,8 @@ void from_json(const nlohmann::ordered_json& j, Config& c) try {
     j.at("interpolate").get_to(c.interpolate);
     j.at("smoothing").get_to(c.smoothing);
     j.at("threshold").get_to(c.threshold);
+
+    j.at("hook_key").get_to(c.hookKey);
     j.at("enable_key").get_to(c.enableKey);
     j.at("next_key").get_to(c.nextKey);
     j.at("prev_key").get_to(c.prevKey);
