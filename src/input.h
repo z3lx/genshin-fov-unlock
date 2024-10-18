@@ -15,7 +15,10 @@ public:
     void RegisterKeys(std::initializer_list<int> vKeys);
     void RegisterOnKeyDown(const KeyEventCallback& callback);
     void RegisterOnKeyUp(const KeyEventCallback& callback);
+
     void Poll() const;
+    void StartPolling(int pollingRate);
+    void StopPolling();
 
 private:
     struct Impl;
