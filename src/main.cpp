@@ -134,11 +134,9 @@ void OnKeyDown(const int vKey) {
     std::lock_guard lock(configMutex);
 
     if (vKey == config.hookKey) {
-        hooked = !hooked;
-        if (hooked) {
+        if (!hooked) {
             setFovHook->Enable();
-        } else {
-            setFovHook->Disable();
+            hooked = true;
         }
     } else if (vKey == config.nextKey && config.enabled) {
         const auto it = std::ranges::find_if(
