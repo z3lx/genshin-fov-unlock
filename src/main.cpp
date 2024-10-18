@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <xutility>
 #include <nlohmann/json.hpp>
 #include <windows.h>
@@ -101,11 +102,13 @@ void InitializeInput() {
     const auto trackedProcess = GetCurrentProcessId();
     input = std::make_unique<InputManager>(trackedProcess);
     input->RegisterKeys({
+        config.hookKey,
         config.enableKey,
         config.nextKey,
         config.prevKey
     });
     input->RegisterOnKeyDown(OnKeyDown);
+    input->StartPolling(30);
 }
 
 // Filter
@@ -124,8 +127,20 @@ uintptr_t firstInstance = 0;
 float firstFov = 0;
 std::chrono::time_point<std::chrono::steady_clock> previousTime;
 
+std::mutex configMutex;
+bool hooked = false;
+
 void OnKeyDown(const int vKey) {
-    if (vKey == config.nextKey && config.enabled) {
+    std::lock_guard lock(configMutex);
+
+    if (vKey == config.hookKey) {
+        hooked = !hooked;
+        if (hooked) {
+            setFovHook->Enable();
+        } else {
+            setFovHook->Disable();
+        }
+    } else if (vKey == config.nextKey && config.enabled) {
         const auto it = std::ranges::find_if(
             config.fovPresets,
             [&](const int presetFov) { return config.fov < presetFov; }
@@ -145,8 +160,9 @@ void OnKeyDown(const int vKey) {
 }
 
 void HkSetFov(void* instance, float value) {
+    std::lock_guard lock(configMutex);
+
     if (!config.interpolate) {
-        input->Poll();
         if (value == 45.0 && config.enabled) {
             value = static_cast<float>(config.fov);
         }
@@ -158,8 +174,6 @@ void HkSetFov(void* instance, float value) {
     const auto deltaTime = std::chrono::duration<float, std::milli>(
         currentTime - previousTime).count();
     if (deltaTime > config.threshold) {
-        input->Poll();
-
         if (setFovCount == 1) {
             filter->SetInitialValue(firstFov);
         }
