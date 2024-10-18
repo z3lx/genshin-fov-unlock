@@ -5,8 +5,9 @@ public:
     Hook(void** target, void* detour, bool enabled = false);
     ~Hook();
 
-    bool Enable() const;
-    bool Disable() const;
+    [[nodiscard]] bool IsEnabled() const;
+    bool Enable();
+    bool Disable();
 
 private:
     struct Impl;

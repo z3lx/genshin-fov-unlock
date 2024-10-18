@@ -5,9 +5,11 @@ struct Hook::Impl {
     Impl(void** target, void* detour, bool enabled);
     ~Impl();
 
-    bool Enable() const;
-    bool Disable() const;
+    [[nodiscard]] bool IsEnabled() const;
+    bool Enable();
+    bool Disable();
 
+    bool isEnabled;
     void* target;
     static int count;
 };
@@ -15,13 +17,14 @@ struct Hook::Impl {
 int Hook::Impl::count = 0;
 
 Hook::Impl::Impl(void** target, void* detour, const bool enabled)
-    : target(*target) {
+    : isEnabled(false)
+    , target(*target) {
     if (count++ == 0) {
         MH_Initialize();
     }
     MH_CreateHook(*target, detour, target);
     if (enabled) {
-        MH_EnableHook(*target);
+        Enable();
     }
 }
 
@@ -32,12 +35,24 @@ Hook::Impl::~Impl() {
     }
 }
 
-bool Hook::Impl::Enable() const {
-    return MH_EnableHook(this->target) == MH_OK;
+bool Hook::Impl::IsEnabled() const {
+    return isEnabled;
 }
 
-bool Hook::Impl::Disable() const {
-    return MH_DisableHook(this->target) == MH_OK;
+bool Hook::Impl::Enable() {
+    const bool success = MH_EnableHook(this->target) == MH_OK;
+    if (success) {
+        isEnabled = true;
+    }
+    return success;
+}
+
+bool Hook::Impl::Disable() {
+    const bool success = MH_DisableHook(this->target) == MH_OK;
+    if (success) {
+        isEnabled = false;
+    }
+    return success;
 }
 
 Hook::Hook(void** target, void* detour, const bool enabled)
@@ -47,10 +62,14 @@ Hook::~Hook() {
     delete impl;
 }
 
-bool Hook::Enable() const {
+bool Hook::IsEnabled() const {
+    return impl->IsEnabled();
+}
+
+bool Hook::Enable() {
     return impl->Enable();
 }
 
-bool Hook::Disable() const {
+bool Hook::Disable() {
     return impl->Disable();
 }
