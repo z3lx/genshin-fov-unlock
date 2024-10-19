@@ -2,7 +2,7 @@
 ![GitHub all releases](https://img.shields.io/github/downloads/z3lx/genshin-fov-unlock/total)
 
 # Genshin Impact FOV Unlocker
-A plugin for Genshin Impact that unlocks the camera's field of view (FOV) to values greater than the default of 45. It includes a DLL designed to be used in conjunction with [`genshin-fps-unlock`](https://github.com/34736384/genshin-fps-unlock). If you find the plugin useful, consider starring the repository 🌟!
+A plugin for Genshin Impact that unlocks the camera's field of view (FOV) to values greater than the default of 45. It includes a DLL designed to be used in conjunction with [**genshin-fps-unlock**](https://github.com/34736384/genshin-fps-unlock). If you find the plugin useful, consider starring the repository 🌟!
 
 https://github.com/user-attachments/assets/56a11762-ebd2-4093-8c1d-768f913bd063
 
@@ -11,17 +11,32 @@ While I have personally used this plugin without any issues and have not been ba
 
 Furthermore, while the plugin itself is lightweight, increasing the field of view causes the game to render more objects on the screen, which will noticeably impact performance. Some graphical artifacts may also occur at extreme values.
 
-## Usage
-1. Download the latest release of [`genshin-fps-unlock`](https://github.com/34736384/genshin-fps-unlock/releases) if you haven't already.
-2. Download the `genshin-fov-unlock` plugin from the [releases page](https://github.com/z3lx/genshin-fov-unlock/releases) or build it from source. 
-3. Extract the contents of the downloaded archive to a folder of your choice other than the root directory of the FPS unlocker.
-4. Open the `genshin-fps-unlock` executable (`unlockfps_nc.exe`).
-5. Navigate to `Options` → `Settings` → `DLLs` and add the path to the `genshin-fov-unlock.dll` file.
+## Installation
+1. Download the latest release of the **genshin-fps-unlock** tool.
+   1. Navigate to the project's [**latest release**](https://github.com/34736384/genshin-fps-unlock/releases/latest).
+   2. Download the **unlockfps_nc.exe** executable from the **Assets** section.
+   3. Place the executable in a folder of your choice.
+2. Download the latest release of the **genshin-fov-unlock** plugin.
+   1. Navigate to the project's [**latest release**](https://github.com/z3lx/genshin-fov-unlock/releases/latest).
+   2. Download the **plugin.zip** archive from the **Assets** section.
+   3. Unzip the contents of the archive to a folder of your choice **other than the root directory of the genshin-fps-unlock tool**. The archive includes the **genshin-fov-unlock.dll** library and the **fov_config.json** configuration.
+3. Configure the **genshin-fps-unlock** tool to work with the plugin.
+   1. Open the **unlockfps_nc.exe** executable.
+   2. Navigate to **Options** → **Settings** → **DLLs** → **Add**.
+   3. Add the path to the **genshin-fov-unlock.dll** file.
+4. (Optional, if there are issues) Modify the plugin's settings.
+   1. Open the **fov_config.json** file in a text editor.
+   2. Modify the settings as desired. Refer to the [**Configuration**](#Configuration) section for more information.
 
-The plugin should now be loaded the next time the game is launched with `genshin-fps-unlock`, either automatically (by ticking the "Start Game Automatically" option), or manually (by clicking on the "Start Game" button). By default, the <kbd>left arrow</kbd> and <kbd>right arrow</kbd> keys cycle through the preset field of view values, and the <kbd>down arrow</kbd> key enables or disables the plugin. Due to the integrity check at the start of the game, you now also need to manually hook the plugin by pressing <kbd>up arrow</kbd> **when in the loading screen of a domain**. Doing this anywhere else may cause the game to crash. Repeated presses of <kbd>up arrow</kbd> after the plugin has been hooked will have no effect. For more advanced configuration and troubleshooting, refer to the section below.
+The plugin should now be loaded the next time the game is launched with the **genshin-fps-unlock** tool by running the **unlockfps_nc.exe** executable. For more information on how to use the tool, refer to the project's [**README**](https://github.com/34736384/genshin-fps-unlock/blob/netcore/README.md).
+
+## Usage
+By default, the <kbd>left arrow</kbd> and <kbd>right arrow</kbd> keys cycle through the preset field of view values, and the <kbd>down arrow</kbd> key enables or disables the plugin. Due to the integrity check at the start of the game, it is now also needed to **manually hook the plugin** with the <kbd>up arrow</kbd> key **when in the initial loading screen of the game** as hooking it anywhere else may cause it to crash. Refer to the video below.
+
+https://github.com/user-attachments/assets/70d59071-addd-47f0-a959-ff8edc58d78c
 
 ## Configuration
-The plugin's behavior and settings can optionally be customized through the `fov_config.json` file located in the same directory as the DLL. The following keys are available for configuration:
+The plugin's behavior and settings can optionally be customized through the **fov_config.json** file located in the same directory as the **genshin-fov-unlock.dll** library. The following settings are available for configuration:
 
 - `enabled` (bool): Default state of the plugin when the game starts.
 - `fov` (int): Default FOV to use when the game starts.
@@ -61,7 +76,7 @@ The default configuration is as follows:
 ```
 
 ## Building
-If you just want to use the plugin, you should follow the instructions in the [Usage](#usage) section. To build the plugin from source, follow these steps:
+If you just want to use the plugin, you should follow the instructions in the [Installation](#Installation) section. To build the plugin from source, follow these steps:
 
 1. Ensure you are on Windows and have git, CMake, and MSVC installed.
 2. Clone the repository and navigate to the project directory:
@@ -78,7 +93,7 @@ cmake .
 cmake --build . --config Release
 ```
 
-The compiled DLL will be located in the `Release` directory. If you encounter issues with the precompiled MinHook library, consider recompiling it from source.
+The compiled **genshin-fov-unlock.dll** library will be located in the **Release** directory. If you encounter issues with the precompiled MinHook library, consider recompiling it from source.
 
 ## Attributions
 - The offsets used in this project ([line 87 of `main.cpp`](https://github.com/z3lx/genshin-fov-unlock/blob/main/src/main.cpp#L87)) were obtained from the [`genshin-utility`](https://github.com/lanylow/genshin-utility) project, licensed under the GPL-3.0 License.
