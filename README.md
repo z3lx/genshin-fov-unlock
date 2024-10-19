@@ -11,12 +11,6 @@ While I have personally used this plugin without any issues and have not been ba
 
 Furthermore, while the plugin itself is lightweight, increasing the field of view causes the game to render more objects on the screen, which will noticeably impact performance. Some graphical artifacts may also occur at extreme values.
 
-## Features
-- Unlocks the camera's FOV to values greater than the default of 45.
-- Provides keybindings to change the FOV or disable the plugin while in-game.
-- Offers more advanced configurable settings in a JSON file.
-- Integrates almost seamlessly with the game, correctly handling character bursts that manipulate the camera's FOV. However, the plugin needs to be manually disabled for cutscenes.
-
 ## Usage
 1. Download the latest release of [`genshin-fps-unlock`](https://github.com/34736384/genshin-fps-unlock/releases) if you haven't already.
 2. Download the `genshin-fov-unlock` plugin from the [releases page](https://github.com/z3lx/genshin-fov-unlock/releases) or build it from source. 
