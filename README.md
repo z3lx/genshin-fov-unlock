@@ -20,11 +20,11 @@ Furthermore, while the plugin itself is lightweight, increasing the field of vie
 ## Usage
 1. Download the latest release of [`genshin-fps-unlock`](https://github.com/34736384/genshin-fps-unlock/releases) if you haven't already.
 2. Download the `genshin-fov-unlock` plugin from the [releases page](https://github.com/z3lx/genshin-fov-unlock/releases) or build it from source. 
-3. Extract the contents of the downloaded archive to a folder of your choice.
+3. Extract the contents of the downloaded archive to a folder of your choice other than the root directory of the FPS unlocker.
 4. Open the `genshin-fps-unlock` executable (`unlockfps_nc.exe`).
 5. Navigate to `Options` → `Settings` → `DLLs` and add the path to the `genshin-fov-unlock.dll` file.
 
-The plugin should now be loaded the next time the game is launched with `genshin-fps-unlock`. By default, the <kbd>left arrow</kbd> and <kbd>right arrow</kbd> keys cycle through the preset field of view values, and the <kbd>down arrow</kbd> key enables or disables the plugin.
+The plugin should now be loaded the next time the game is launched with `genshin-fps-unlock`. By default, the <kbd>left arrow</kbd> and <kbd>right arrow</kbd> keys cycle through the preset field of view values, and the <kbd>down arrow</kbd> key enables or disables the plugin. Due to the integrity check at the start of the game, you now also need to manually hook the plugin by pressing <kbd>up arrow</kbd> **when in the loading screen of a domain**. Doing this anywhere else may cause the game to crash. Repeated presses of <kbd>up arrow</kbd> after the plugin has been hooked will have no effect. For more advanced configuration and troubleshooting, refer to the section below.
 
 ## Configuration
 The plugin's behavior and settings can optionally be customized through the `fov_config.json` file located in the same directory as the DLL. The following keys are available for configuration:
@@ -34,7 +34,8 @@ The plugin's behavior and settings can optionally be customized through the `fov
 - `fov_presets` (array of int): List of FOV values to cycle through using keybindings.
 - `interpolate` (bool): Whether to interpolate FOV changes from cycling through presets, character bursts, or other sources. Smoothing and threshold settings are used when interpolation is enabled.
 - `smoothing` (float): Time constant in seconds for the exponential filter. Lower values make the FOV changes more responsive.
-- `threshold` (float): Time in milliseconds to use as a threshold for frame counting. An incorrect value may cause the FOV to fluctuate or not change at all. Default of 4 ms should work for most systems. See [this issue](https://github.com/z3lx/genshin-fov-unlock/issues/2).
+- `threshold` (float): Time in milliseconds to use as a threshold for frame counting. An incorrect value may cause the FOV to fluctuate or not change at all. Default of 3 ms should work for most systems. **If you are on a high-end system and the camera keeps "popping in", consider lowering this value to 2 ms, or disabling interpolation entirely.** See [this issue](https://github.com/z3lx/genshin-fov-unlock/issues/2) for more information.
+- `hook_key` (int): Key to hook the plugin into the game. 
 - `enable_key` (int): Key to enable or disable the plugin.
 - `next_key` (int): Key to cycle to the next FOV preset.
 - `prev_key` (int): Key to cycle to the previous FOV preset.
@@ -57,7 +58,8 @@ The default configuration is as follows:
     ],
     "interpolate": true,
     "smoothing": 0.2,
-    "threshold": 4.0,
+    "threshold": 3.0,
+    "hook_key": 38,
     "enable_key": 40,
     "next_key": 39,
     "prev_key": 37
