@@ -2,6 +2,7 @@
 
 class Hook {
 public:
+    Hook();
     Hook(void** target, void* detour, bool enabled = false);
     ~Hook();
 

@@ -3,9 +3,10 @@
 
 int Hook::_count = 0;
 
+Hook::Hook(): _isEnabled(false), _target(nullptr) { }
+
 Hook::Hook(void** target, void* detour, const bool enabled)
-    : _isEnabled(false)
-    , _target(*target) {
+    : _isEnabled(false), _target(*target) {
     if (_count++ == 0) {
         MH_Initialize();
     }
@@ -17,7 +18,7 @@ Hook::Hook(void** target, void* detour, const bool enabled)
 
 Hook::~Hook() {
     Disable();
-    if (--_count == 0) {
+    if (_target && --_count == 0) {
         MH_Uninitialize();
     }
 }
