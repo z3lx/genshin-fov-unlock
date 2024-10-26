@@ -7,6 +7,9 @@ Hook::Hook(): _isEnabled(false), _target(nullptr) { }
 
 Hook::Hook(void** target, void* detour, const bool enabled)
     : _isEnabled(false), _target(*target) {
+    if (!_target) {
+        return;
+    }
     if (_count++ == 0) {
         MH_Initialize();
     }
@@ -21,6 +24,23 @@ Hook::~Hook() {
     if (_target && --_count == 0) {
         MH_Uninitialize();
     }
+}
+
+Hook& Hook::operator=(Hook&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
+    _isEnabled = other._isEnabled;
+    _target = other._target;
+    other._isEnabled = false;
+    other._target = nullptr;
+    return *this;
+}
+
+Hook::Hook(Hook&& other) noexcept
+    : _isEnabled(other._isEnabled), _target(other._target) {
+    other._isEnabled = false;
+    other._target = nullptr;
 }
 
 bool Hook::IsEnabled() const {
