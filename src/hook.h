@@ -10,6 +10,7 @@ public:
     bool Disable();
 
 private:
-    struct Impl;
-    Impl* impl;
+    bool _isEnabled;
+    void* _target;
+    static int _count;
 };
