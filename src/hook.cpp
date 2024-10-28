@@ -6,6 +6,109 @@
 #include <source_location>
 #include <stdexcept>
 
+namespace mh {
+    void Initialize();
+    void Deinitialize();
+
+    void CreateHook(void* target, void* detour, void** original);
+    void Remove(void* target);
+
+    void Enable(void* target);
+    void Disable(void* target);
+}
+
+int Hook::_count = 0;
+
+Hook::Hook()
+    : _isCreated(false)
+    , _isEnabled(false)
+    , _target(nullptr) {
+    if (_count++ == 0) {
+        mh::Initialize();
+    }
+}
+
+Hook::~Hook() {
+    Remove();
+    if (--_count == 0) {
+        mh::Deinitialize();
+    }
+}
+
+Hook::Hook(Hook&& other) noexcept
+    : _isCreated(other._isCreated)
+    , _isEnabled(other._isEnabled)
+    , _target(other._target) {
+    ++_count;
+    other._isCreated = false;
+    other._isEnabled = false;
+    other._target = nullptr;
+}
+
+Hook& Hook::operator=(Hook&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
+    _isCreated = other._isCreated;
+    _isEnabled = other._isEnabled;
+    _target = other._target;
+    other._isCreated = false;
+    other._isEnabled = false;
+    other._target = nullptr;
+    return *this;
+}
+
+bool Hook::IsCreated() const noexcept {
+    return _isCreated;
+}
+
+void Hook::Create(void** target, void* detour, const bool enable) {
+    if (!target || !detour) {
+        throw std::invalid_argument(
+            "Target and detour must not be null"
+        );
+    }
+
+    Remove();
+
+    _target = *target;
+    mh::CreateHook(_target, detour, target);
+    _isCreated = true;
+
+    if (enable) {
+        Enable();
+    }
+}
+
+void Hook::Remove() {
+    if (!_isCreated) {
+        return;
+    }
+    Disable();
+    mh::Remove(_target);
+    _isCreated = false;
+}
+
+bool Hook::IsEnabled() const noexcept {
+    return _isEnabled;
+}
+
+void Hook::Enable() {
+    if (!_isCreated || _isEnabled) {
+        return;
+    }
+    mh::Enable(_target);
+    _isEnabled = true;
+}
+
+void Hook::Disable() {
+    if (!_isCreated || !_isEnabled) {
+        return;
+    }
+    mh::Disable(_target);
+    _isEnabled = false;
+}
+
 void CheckStatus(
     const MH_STATUS status,
     const std::source_location& location = std::source_location::current()) {
@@ -21,86 +124,26 @@ void CheckStatus(
     ));
 }
 
-void Initialize() {
+void mh::Initialize() {
     CheckStatus(MH_Initialize());
 }
 
-void Deinitialize() {
+void mh::Deinitialize() {
     CheckStatus(MH_Uninitialize());
 }
 
-void CreateHook(void* target, void* detour, void** original) {
+void mh::CreateHook(void* target, void* detour, void** original) {
     CheckStatus(MH_CreateHook(target, detour, original));
 }
 
-int Hook::_count = 0;
-
-Hook::Hook() noexcept : _isEnabled(false), _target(nullptr) { }
-
-Hook::Hook(void** target, void* detour, const bool enable)
-    : _isEnabled(false), _target(*target) {
-    if (!_target || !detour) {
-        throw std::invalid_argument("Target and detour must not be null");
-    }
-
-    if (_count++ == 0) {
-        Initialize();
-    }
-    try {
-        CreateHook(_target, detour, target);
-    } catch (...) {
-        if (--_count == 0) {
-            Deinitialize();
-        }
-        throw;
-    }
-
-    if (enable) {
-        Enable();
-    }
+void mh::Remove(void* target) {
+    CheckStatus(MH_RemoveHook(target));
 }
 
-Hook::~Hook() noexcept try {
-    if (!_target) {
-        return;
-    }
-    if (_isEnabled) {
-        Disable();
-    }
-    if (--_count == 0) {
-        Deinitialize();
-    }
-} catch(...) {
-    // TODO: Log error
+void mh::Enable(void* target) {
+    CheckStatus(MH_EnableHook(target));
 }
 
-Hook& Hook::operator=(Hook&& other) noexcept {
-    if (this == &other) {
-        return *this;
-    }
-    _isEnabled = other._isEnabled;
-    _target = other._target;
-    other._isEnabled = false;
-    other._target = nullptr;
-    return *this;
-}
-
-Hook::Hook(Hook&& other) noexcept
-    : _isEnabled(other._isEnabled), _target(other._target) {
-    other._isEnabled = false;
-    other._target = nullptr;
-}
-
-bool Hook::IsEnabled() const noexcept {
-    return _isEnabled;
-}
-
-void Hook::Enable() {
-    CheckStatus(MH_EnableHook(_target));
-    _isEnabled = true;
-}
-
-void Hook::Disable() {
-    CheckStatus(MH_DisableHook(_target));
-    _isEnabled = false;
+void mh::Disable(void* target) {
+    CheckStatus(MH_DisableHook(target));
 }
