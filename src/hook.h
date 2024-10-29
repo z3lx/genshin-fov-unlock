@@ -26,7 +26,7 @@ public:
     Hook& operator=(Hook&& other) noexcept ;
 
     [[nodiscard]] bool IsCreated() const noexcept;
-    void Create(void* target, void* detour, bool enable = false);
+    void Create(void* target, void* detour);
     void Remove();
 
     [[nodiscard]] bool IsEnabled() const noexcept;
@@ -103,14 +103,10 @@ bool Hook<Ret, Args...>::IsCreated() const noexcept {
 }
 
 template <typename Ret, typename... Args>
-void Hook<Ret, Args...>::Create(
-    void* target,
-    void* detour,
-    const bool enable) {
+void Hook<Ret, Args...>::Create(void* target, void* detour) {
     if (!target || !detour) {
         throw std::invalid_argument("Target and detour must not be null");
     }
-
     Remove();
 
     _target = target;
@@ -118,10 +114,6 @@ void Hook<Ret, Args...>::Create(
     CheckStatus(MH_CreateHook(_target, detour, &original));
     _original = reinterpret_cast<FuncPtr>(original);
     _isCreated = true;
-
-    if (enable) {
-        Enable();
-    }
 }
 
 template <typename Ret, typename... Args>
