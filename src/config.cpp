@@ -3,8 +3,10 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <stdexcept>
 #include <string>
-#include <vector>
 
 constexpr std::string ENABLED = "enabled";
 constexpr std::string FOV = "fov";
@@ -17,43 +19,58 @@ constexpr std::string ENABLE_KEY = "enable_key";
 constexpr std::string NEXT_KEY = "next_key";
 constexpr std::string PREV_KEY = "prev_key";
 
-void to_json(nlohmann::ordered_json& j, const Config& c) {
-    j = nlohmann::ordered_json{
-        { ENABLED, c.enabled },
-        { FOV, c.fov },
-        { FOV_PRESETS, c.fovPresets },
-        { INTERPOLATE, c.interpolate },
-        { SMOOTHING, c.smoothing },
-        { THRESHOLD, c.threshold },
-        { HOOK_KEY, c.hookKey },
-        { ENABLE_KEY, c.enableKey },
-        { PREV_KEY, c.nextKey },
-        { PREV_KEY, c.prevKey }
+nlohmann::ordered_json Config::ToJson() const noexcept {
+    return {
+        { ENABLED, enabled },
+        { FOV, fov },
+        { FOV_PRESETS, fovPresets },
+        { INTERPOLATE, interpolate },
+        { SMOOTHING, smoothing },
+        { THRESHOLD, threshold },
+        { HOOK_KEY, hookKey },
+        { ENABLE_KEY, enableKey },
+        { PREV_KEY, nextKey },
+        { PREV_KEY, prevKey }
     };
 }
 
-void from_json(const nlohmann::ordered_json& j, Config& c) try {
-    j.at(ENABLED).get_to(c.enabled);
-
-    int fov;
-    j.at(FOV).get_to(fov);
-    if (fov >= 1 && fov <= 179) {
-        c.fov = fov;
+void Config::ToJson(const std::filesystem::path& path) const {
+    const auto json = ToJson();
+    std::ofstream file(path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file for writing");
     }
+    file << json.dump(4);
+}
 
-    std::vector<int> presets;
-    j.at(FOV_PRESETS).get_to(presets);
-    std::ranges::sort(presets);
-    c.fovPresets = presets;
+void Config::FromJson(const nlohmann::ordered_json& json) {
+    Config config;
 
-    j.at(INTERPOLATE).get_to(c.interpolate);
-    j.at(SMOOTHING).get_to(c.smoothing);
-    j.at(THRESHOLD).get_to(c.threshold);
+    json.at(ENABLED).get_to(config.enabled);
+    json.at(FOV).get_to(config.fov);
+    json.at(FOV_PRESETS).get_to(config.fovPresets);
+    json.at(INTERPOLATE).get_to(config.interpolate);
+    json.at(SMOOTHING).get_to(config.smoothing);
+    json.at(THRESHOLD).get_to(config.threshold);
+    json.at(HOOK_KEY).get_to(config.hookKey);
+    json.at(ENABLE_KEY).get_to(config.enableKey);
+    json.at(NEXT_KEY).get_to(config.nextKey);
+    json.at(PREV_KEY).get_to(config.prevKey);
 
-    j.at(HOOK_KEY).get_to(c.hookKey);
-    j.at(ENABLE_KEY).get_to(c.enableKey);
-    j.at(NEXT_KEY).get_to(c.nextKey);
-    j.at(PREV_KEY).get_to(c.prevKey);
-} catch (...) {
-    c = Config();
+    if (config.fov >= 1 && config.fov <= 179) {
+        fov = config.fov;
+    }
+    std::ranges::sort(config.fovPresets);
+
+    *this = config;
+}
+
+void Config::FromJson(const std::filesystem::path& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file for reading");
+    }
+    nlohmann::ordered_json json;
+    file >> json;
+    FromJson(json);
 }
