@@ -18,7 +18,7 @@ struct Config {
 
     bool interpolate = true;
     float smoothing = 0.2;
-    float threshold = 4.0;
+    float threshold = 3.0;
 
     int hookKey = VK_UP;
     int enableKey = VK_DOWN;
