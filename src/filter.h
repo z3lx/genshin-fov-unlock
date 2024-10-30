@@ -1,17 +1,21 @@
 #pragma once
 
+#include <chrono>
+
 class ExponentialFilter {
 public:
     explicit ExponentialFilter(
-        float timeConstant,
-        float initialValue = 0.0f
+        float timeConstant = 0.0,
+        float initialValue = 0.0
     );
-    ~ExponentialFilter();
+    ~ExponentialFilter() = default;
+
     void SetTimeConstant(float value);
     void SetInitialValue(float value);
     float Update(float value);
 
 private:
-    struct Impl;
-    Impl* impl;
+    float _timeConstant;
+    float _lastFilteredValue;
+    std::chrono::time_point<std::chrono::steady_clock> _lastTime;
 };

@@ -1,40 +1,27 @@
 #include "filter.h"
+
 #include <chrono>
 #include <cmath>
 
-namespace chrono = std::chrono;
-
-struct ExponentialFilter::Impl {
-    Impl(float timeConstant, float initialValue);
-    void SetTimeConstant(float value);
-    void SetInitialValue(float value);
-    float Update(float value);
-
-    float timeConstant;
-    float lastFilteredValue;
-    chrono::time_point<chrono::steady_clock> lastTime;
-};
-
-ExponentialFilter::Impl::Impl(
+ExponentialFilter::ExponentialFilter(
     const float timeConstant,
-    const float initialValue
-) : timeConstant(0)
-  , lastFilteredValue(0)
-{
+    const float initialValue)
+    : _timeConstant(0)
+    , _lastFilteredValue(0) {
     SetTimeConstant(timeConstant);
     SetInitialValue(initialValue);
 }
 
-void ExponentialFilter::Impl::SetTimeConstant(const float value) {
-    timeConstant = value;
+void ExponentialFilter::SetTimeConstant(const float value) {
+    _timeConstant = value;
 }
 
-void ExponentialFilter::Impl::SetInitialValue(const float value) {
-    lastFilteredValue = value;
-    lastTime = chrono::steady_clock::now();
+void ExponentialFilter::SetInitialValue(const float value) {
+    _lastFilteredValue = value;
+    _lastTime = std::chrono::steady_clock::now();
 }
 
-float ExponentialFilter::Impl::Update(const float value) {
+float ExponentialFilter::Update(const float value) {
     // y(k) = alpha * y(k - 1) + (1 - alpha) * x(k)
     // alpha = exp(-T / tau)
     //
@@ -44,33 +31,16 @@ float ExponentialFilter::Impl::Update(const float value) {
     // T is delta time between the current and previous time steps
     // tau is the time constant
 
-    const auto currentTime = chrono::steady_clock::now();
-    const auto deltaTime = chrono::duration_cast<chrono::duration<float>>(
-        currentTime - lastTime).count();
-    lastTime = currentTime;
+    if (_timeConstant <= 0) {
+        return value;
+    }
 
-    const auto alpha = std::expf(-deltaTime / timeConstant);
-    lastFilteredValue = alpha * lastFilteredValue + (1.0f - alpha) * value;
-    return lastFilteredValue;
-}
+    const auto currentTime = std::chrono::steady_clock::now();
+    const auto deltaTime = std::chrono::duration_cast<std::chrono::duration<float>>(
+        currentTime - _lastTime).count();
+    _lastTime = currentTime;
 
-ExponentialFilter::ExponentialFilter(
-    const float timeConstant,
-    const float initialValue
-) : impl(new Impl(timeConstant, initialValue)) { }
-
-ExponentialFilter::~ExponentialFilter() {
-    delete impl;
-}
-
-void ExponentialFilter::SetInitialValue(const float value) {
-    impl->SetInitialValue(value);
-}
-
-void ExponentialFilter::SetTimeConstant(const float value) {
-    impl->SetTimeConstant(value);
-}
-
-float ExponentialFilter::Update(const float value) {
-    return impl->Update(value);
+    const auto alpha = std::expf(-deltaTime / _timeConstant);
+    _lastFilteredValue = alpha * _lastFilteredValue + (1.0f - alpha) * value;
+    return _lastFilteredValue;
 }
