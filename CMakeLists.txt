@@ -8,7 +8,7 @@ if (NOT WIN32)
     )
 endif()
 
-if (NOT MSVC OR NOT "${CMAKE_VS_PLATFORM_TOOLSET}" STREQUAL "v141")
+if (NOT MSVC OR NOT ${CMAKE_VS_PLATFORM_TOOLSET} STREQUAL v141)
     message(
         WARNING
         "The precompiled MinHook library is built with MSVC v141 (VS 2017). "
@@ -19,7 +19,7 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 
 function(download_and_extract url dir)
-    set(ZIP_PATH "${dir}/temp.zip")
+    set(ZIP_PATH ${dir}/temp.zip)
     file(DOWNLOAD ${url} ${ZIP_PATH})
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E tar xzf ${ZIP_PATH}
@@ -28,41 +28,40 @@ function(download_and_extract url dir)
     file(REMOVE ${ZIP_PATH})
 endfunction()
 
-set(DEPS_DIR "${CMAKE_BINARY_DIR}/deps")
+set(DEPS_DIR ${CMAKE_BINARY_DIR}/deps)
 
 # TsudaKageyu/minhook
-set(MINHOOK_DIR "${DEPS_DIR}/minhook")
+set(MINHOOK_DIR ${DEPS_DIR}/minhook)
 download_and_extract(
-    "https://github.com/TsudaKageyu/minhook/releases/download/v1.3.3/MinHook_133_lib.zip"
-    "${MINHOOK_DIR}"
+    https://github.com/TsudaKageyu/minhook/releases/download/v1.3.3/MinHook_133_lib.zip
+    ${MINHOOK_DIR}
 )
 
 # nlohmann/json
-set(JSON_DIR "${DEPS_DIR}/json")
+set(JSON_DIR ${DEPS_DIR}/json)
 download_and_extract(
-    "https://github.com/nlohmann/json/releases/download/v3.11.3/include.zip"
-    "${JSON_DIR}"
+    https://github.com/nlohmann/json/releases/download/v3.11.3/include.zip
+    ${JSON_DIR}
 )
 
 add_library(
     genshin_fov_unlock
     SHARED
-    "src/dllmain.cpp"
-    "src/main.h"
-    "src/main.cpp"
-    "src/config.h"
-    "src/input.h"
-    "src/input.cpp"
-    "src/filter.h"
-    "src/filter.cpp"
-    "src/hook.cpp"
-    "src/hook.h"
+    src/config.cpp
+    src/config.h
+    src/dllmain.cpp
+    src/filter.h
+    src/hook.h
+    src/input.cpp
+    src/input.h
+    src/unlocker.cpp
+    src/unlocker.h
 )
 
 target_include_directories(
     genshin_fov_unlock
     PRIVATE
-    "src"
+    src
     ${MINHOOK_DIR}/include
     ${JSON_DIR}/include
 )
