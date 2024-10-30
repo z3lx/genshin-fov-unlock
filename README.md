@@ -96,9 +96,9 @@ cmake --build . --config Release
 The compiled **genshin-fov-unlock.dll** library will be located in the **Release** directory. If you encounter issues with the precompiled MinHook library, consider recompiling it from source.
 
 ## Attributions
-- The offsets used in this project ([line 87 of `main.cpp`](https://github.com/z3lx/genshin-fov-unlock/blob/main/src/main.cpp#L87)) were obtained from the [`genshin-utility`](https://github.com/lanylow/genshin-utility) project, licensed under the GPL-3.0 License.
-- The [`minhook`](https://github.com/TsudaKageyu/minhook) library is used under the BSD-2-Clause.
-- The [`nlohmann/json`](https://github.com/nlohmann/json) library is used under the MIT License.
+- The offsets used in this project ([line 49 of `unlocker.cpp`](https://github.com/z3lx/genshin-fov-unlock/blob/main/src/unlocker.cpp#L49)) were obtained from the [**genshin-utility**](https://github.com/lanylow/genshin-utility) project, licensed under the GPL-3.0 License.
+- The [**minhook**](https://github.com/TsudaKageyu/minhook) library is used under the BSD-2-Clause.
+- The [**nlohmann/json**](https://github.com/nlohmann/json) library is used under the MIT License.
 
 ## License
 This project is licensed under the GPL-3.0 License. See the [LICENSE](LICENSE) file for more information.
