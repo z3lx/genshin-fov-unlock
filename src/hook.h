@@ -1,174 +1,133 @@
 #pragma once
 
-#include <MinHook.h>
-
-#include <format>
-#include <source_location>
 #include <stdexcept>
 
 namespace detail {
     class HookShared {
     protected:
-        static inline int _count = 0;
+        [[nodiscard]] static bool IsInitialized() noexcept;
+        static void Initialize();
+        static void Uninitialize();
+
+        [[nodiscard]] static bool IsCreated(void* target) noexcept;
+        static void Create(void* target, void* detour, void** original);
+        static void Remove(void* target);
+
+        [[nodiscard]] static bool IsEnabled(void* target) noexcept;
+        static void Enable(void* target);
+        static void Disable(void* target);
     };
 }
 
 template <typename Ret, typename... Args>
-class Hook : detail::HookShared {
+class Hook : public detail::HookShared {
 public:
-    Hook();
-    ~Hook();
+    Hook() noexcept;
+    ~Hook() noexcept;
 
-    Hook(const Hook&) noexcept = delete;
-    Hook& operator=(const Hook&) noexcept = delete;
-
-    Hook(Hook&& other) noexcept ;
-    Hook& operator=(Hook&& other) noexcept ;
+    [[nodiscard]] bool IsInitialized() const noexcept;
+    void Initialize() const;
+    void Uninitialize() const;
 
     [[nodiscard]] bool IsCreated() const noexcept;
     void Create(void* target, void* detour);
-    void Remove();
+    void Remove() const;
 
     [[nodiscard]] bool IsEnabled() const noexcept;
-    void Enable();
-    void Disable();
+    void Enable() const;
+    void Disable() const;
 
     Ret CallOriginal(Args... args) const;
-private:
-    static void CheckStatus(
-        MH_STATUS status,
-        const std::source_location& location
-        = std::source_location::current()
-    );
 
+private:
     using FuncPtr = Ret(*)(Args...);
 
-    bool _isCreated;
-    bool _isEnabled;
     void* _target;
-    FuncPtr _original;
+    void* _original;
 };
 
 template <typename Ret, typename... Args>
-Hook<Ret, Args...>::Hook()
-    : _isCreated(false)
-    , _isEnabled(false)
-    , _target(nullptr)
-    , _original(nullptr) {
-    if (_count++ == 0) {
-        CheckStatus(MH_Initialize());
+Hook<Ret, Args...>::Hook() noexcept
+    : _target(nullptr)
+    , _original(nullptr) { }
+
+template <typename Ret, typename... Args>
+Hook<Ret, Args...>::~Hook() noexcept {
+    try { Remove(); }
+    catch (...) { }
+}
+
+// ReSharper disable once CppMemberFunctionMayBeStatic
+template <typename Ret, typename... Args>
+bool Hook<Ret, Args...>::IsInitialized() const noexcept {
+    return HookShared::IsInitialized();
+}
+
+template <typename Ret, typename... Args>
+void Hook<Ret, Args...>::Initialize() const {
+    if (!IsInitialized()) {
+        HookShared::Initialize();
     }
 }
 
 template <typename Ret, typename... Args>
-Hook<Ret, Args...>::~Hook() {
-    Remove();
-    if (--_count == 0) {
-        CheckStatus(MH_Uninitialize());
+void Hook<Ret, Args...>::Uninitialize() const {
+    if (IsInitialized()) {
+        HookShared::Uninitialize();
     }
-}
-
-template <typename Ret, typename... Args>
-Hook<Ret, Args...>::Hook(Hook&& other) noexcept
-    : _isCreated(other._isCreated)
-    , _isEnabled(other._isEnabled)
-    , _target(other._target)
-    , _original(other._original) {
-    ++_count;
-    other._isCreated = false;
-    other._isEnabled = false;
-    other._target = nullptr;
-    other._original = nullptr;
-}
-
-template <typename Ret, typename... Args>
-Hook<Ret, Args...>& Hook<Ret, Args...>::operator=(Hook&& other) noexcept {
-    if (this == &other) {
-        return *this;
-    }
-    _isCreated = other._isCreated;
-    _isEnabled = other._isEnabled;
-    _target = other._target;
-    _original = other._original;
-    other._isCreated = false;
-    other._isEnabled = false;
-    other._target = nullptr;
-    other._original = nullptr;
-    return *this;
 }
 
 template <typename Ret, typename... Args>
 bool Hook<Ret, Args...>::IsCreated() const noexcept {
-    return _isCreated;
+    return HookShared::IsCreated(_target);
 }
 
 template <typename Ret, typename... Args>
 void Hook<Ret, Args...>::Create(void* target, void* detour) {
     if (!target || !detour) {
-        throw std::invalid_argument("Target and detour must not be null");
+        throw std::invalid_argument(
+            "Target and detour must not be null"
+        );
     }
     Remove();
-
+    HookShared::Create(target, detour, &_original);
     _target = target;
-    void* original {};
-    CheckStatus(MH_CreateHook(_target, detour, &original));
-    _original = reinterpret_cast<FuncPtr>(original);
-    _isCreated = true;
 }
 
 template <typename Ret, typename... Args>
-void Hook<Ret, Args...>::Remove() {
-    if (!_isCreated) {
-        return;
+void Hook<Ret, Args...>::Remove() const {
+    if (IsInitialized() && IsCreated()) {
+        HookShared::Remove(_target);
     }
-    Disable();
-    CheckStatus(MH_RemoveHook(_target));
-    _isCreated = false;
 }
 
 template <typename Ret, typename... Args>
 bool Hook<Ret, Args...>::IsEnabled() const noexcept {
-    return _isEnabled;
+    return HookShared::IsEnabled(_target);
 }
 
 template <typename Ret, typename... Args>
-void Hook<Ret, Args...>::Enable() {
-    if (!_isCreated || _isEnabled) {
-        return;
+void Hook<Ret, Args...>::Enable() const {
+    if (!IsEnabled()) {
+        HookShared::Enable(_target);
     }
-    CheckStatus(MH_EnableHook(_target));
-    _isEnabled = true;
 }
 
 template <typename Ret, typename... Args>
-void Hook<Ret, Args...>::Disable() {
-    if (!_isCreated || !_isEnabled) {
-        return;
+void Hook<Ret, Args...>::Disable() const {
+    if (IsInitialized() && IsCreated() && IsEnabled()) {
+        HookShared::Disable(_target);
     }
-    CheckStatus(MH_DisableHook(_target));
-    _isEnabled = false;
 }
 
 template <typename Ret, typename... Args>
 Ret Hook<Ret, Args...>::CallOriginal(Args... args) const {
-    if (!_isCreated || !_isEnabled) {
-        throw std::runtime_error("Hook must be created and enabled");
+    if (IsInitialized() && IsCreated() && IsEnabled()) {
+        return reinterpret_cast<FuncPtr>(_original)(
+            std::forward<Args>(args)...
+        );
     }
-    return _original(std::forward<Args>(args)...);
-}
-
-template <typename Ret, typename... Args>
-void Hook<Ret, Args...>::CheckStatus(
-    const MH_STATUS status,
-    const std::source_location& location) {
-    if (status == MH_OK) {
-        return;
-    }
-    throw std::runtime_error(std::format(
-        "MinHook failed with status {} in {} at {}:{}",
-        MH_StatusToString(status),
-        location.function_name(),
-        location.file_name(),
-        location.line()
-    ));
+    throw std::runtime_error(
+        "Hook must be initialized, created, and enabled"
+    );
 }

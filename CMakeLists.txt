@@ -51,6 +51,7 @@ add_library(
     src/config.h
     src/dllmain.cpp
     src/filter.h
+    src/hook.cpp
     src/hook.h
     src/input.cpp
     src/input.h

@@ -48,6 +48,8 @@ void Unlocker::InitializeHook() {
     const auto isGlobal = GetModuleHandle("GenshinImpact.exe") != nullptr;
     const uintptr_t offset = isGlobal ? 0x1136f30 : 0x1136d30;
     const auto target = reinterpret_cast<void*>(module + offset);
+
+    hook.Initialize();
     hook.Create(target, &HkSetFov);
 }
 
