@@ -13,8 +13,8 @@
 
 #include <windows.h>
 
-InputManager::InputManager(const DWORD process) noexcept
-    : _trackedProcess(process)
+InputManager::InputManager() noexcept
+    : _trackedProcess(0)
     , _isPolling(false) { }
 
 InputManager::~InputManager() noexcept {

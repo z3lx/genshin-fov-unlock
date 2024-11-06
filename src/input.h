@@ -15,7 +15,7 @@ class InputManager {
 public:
     using KeyEventCallback = std::function<void(int)>;
 
-    explicit InputManager(DWORD process = 0) noexcept;
+    explicit InputManager() noexcept;
     ~InputManager() noexcept;
 
     void SetTrackedProcess(DWORD process) noexcept;
