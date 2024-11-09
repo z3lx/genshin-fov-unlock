@@ -4,9 +4,12 @@
 #include "hook.h"
 #include "input.h"
 
+#include "spdlog/sinks/basic_file_sink.h"
+
 #include <chrono>
 #include <cmath>
 #include <filesystem>
+#include <memory>
 #include <mutex>
 
 namespace fs = std::filesystem;
@@ -26,24 +29,47 @@ void Unlocker::Initialize() {
         return;
     }
 
+    InitializeLogger();
     InitializeConfig();
     InitializeHook();
     InitializeInput();
     InitializeFilter();
+    logger->info("Plugin initialized successfully");
 
     isInitialized = true;
 }
 
+void Unlocker::InitializeLogger() {
+    auto sink = std::make_shared<spdlog::sinks::basic_file_sink_st>(
+        (workDir / "log.txt").string(), true);
+    logger = std::make_shared<spdlog::logger>("plugin", sink);
+    logger->set_level(spdlog::level::trace);
+    logger->flush_on(spdlog::level::trace);
+}
+
 void Unlocker::InitializeConfig() {
-    const fs::path path = workDir / "fov_config.json";
-    if (!fs::exists(path)) {
-        config.ToJson(path);
+    if (const fs::path path = workDir / "fov_config.json";
+        fs::exists(path)) {
+        try {
+            config.FromJson(path);
+            logger->info("Config loaded successfully");
+        } catch (const std::exception& e) {
+            logger->error("Failed to load Config: {}", e.what());
+            logger->info("Using plugin defaults");
+        }
     } else {
-        config.FromJson(path);
+        try {
+            logger->info("Config file not found, creating default Config");
+            config.ToJson(path);
+            logger->info("Default Config created successfully");
+        } catch (const std::exception& e) {
+            logger->error("Failed to create default Config: {}", e.what());
+            logger->info("Using plugin defaults");
+        }
     }
 }
 
-void Unlocker::InitializeHook() {
+void Unlocker::InitializeHook() try {
     const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
     const auto isGlobal = GetModuleHandle("GenshinImpact.exe") != nullptr;
     const uintptr_t offset = isGlobal ? 0x1136f30 : 0x1136d30;
@@ -51,9 +77,13 @@ void Unlocker::InitializeHook() {
 
     hook.Initialize();
     hook.Create(target, &HkSetFov);
+    logger->info("Hook initialized successfully");
+} catch (const std::exception& e) {
+    logger->critical("Failed to initialize Hook: {}", e.what());
+    throw;
 }
 
-void Unlocker::InitializeInput() {
+void Unlocker::InitializeInput() try {
     const DWORD tracked = GetCurrentProcessId();
     input.SetTrackedProcess(tracked);
     input.RegisterKeys({
@@ -66,18 +96,23 @@ void Unlocker::InitializeInput() {
         this->OnKeyDown(vKey);
     });
     input.StartPolling(30);
+    logger->info("Input initialized successfully");
+} catch (const std::exception& e) {
+    logger->critical("Failed to initialize Input: {}", e.what());
+    throw;
 }
 
-void Unlocker::InitializeFilter() {
-    const float timeConstant = config.smoothing;
-    filter.SetTimeConstant(timeConstant);
+void Unlocker::InitializeFilter() noexcept {
+    filter.SetTimeConstant(config.smoothing);
 }
 
-void Unlocker::OnKeyDown(const int vKey) {
+void Unlocker::OnKeyDown(const int vKey) try {
     std::lock_guard lock(configMutex);
 
     if (vKey == config.hookKey) {
-        if (!hook.IsEnabled()) {
+        if (hook.IsEnabled()) {
+            hook.Disable();
+        } else {
             hook.Enable();
         }
     } else if (vKey == config.nextKey && config.enabled) {
@@ -97,9 +132,11 @@ void Unlocker::OnKeyDown(const int vKey) {
     } else if (vKey == config.enableKey) {
         config.enabled = !config.enabled;
     }
+} catch (const std::exception& e) {
+    logger->error("Failed to process KeyDown: {}", e.what());
 }
 
-void Unlocker::FilterAndSetFov(void* instance, float value) {
+void Unlocker::FilterAndSetFov(void* instance, float value) try {
     std::lock_guard lock(configMutex);
 
     if (!config.interpolate) {
@@ -152,6 +189,8 @@ void Unlocker::FilterAndSetFov(void* instance, float value) {
     }
 
     hook.CallOriginal(instance, value);
+} catch (const std::exception& e) {
+    logger->error("Failed to set FOV: {}", e.what());
 }
 
 void Unlocker::HkSetFov(void* instance, float value) {

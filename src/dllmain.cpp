@@ -6,10 +6,13 @@ std::filesystem::path GetPath(const HMODULE module) {
     return std::filesystem::path(path).parent_path();
 }
 
-void Initialize(HINSTANCE hinstDLL) {
+void Initialize(HINSTANCE hinstDLL) try {
     Unlocker& instance = Unlocker::GetInstance();
     instance.SetWorkDir(GetPath(hinstDLL));
     instance.Initialize();
+} catch (...) {
+    // TODO: CLEANUP
+    FreeLibraryAndExitThread(hinstDLL, 1);
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {

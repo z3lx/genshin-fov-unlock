@@ -5,8 +5,11 @@
 #include "hook.h"
 #include "input.h"
 
+#include <spdlog/spdlog.h>
+
 #include <chrono>
 #include <filesystem>
+#include <memory>
 #include <mutex>
 
 class Unlocker {
@@ -22,10 +25,11 @@ private:
     Unlocker() = default;
     ~Unlocker() = default;
 
+    void InitializeLogger();
     void InitializeConfig();
     void InitializeHook();
     void InitializeInput();
-    void InitializeFilter();
+    void InitializeFilter() noexcept;
 
     static void HkSetFov(void* instance, float value);
     void FilterAndSetFov(void* instance, float value);
@@ -33,6 +37,7 @@ private:
 
     std::filesystem::path workDir;
 
+    std::shared_ptr<spdlog::logger> logger;
     Config config;
     Hook<void, void*, float> hook;
     InputManager input;
