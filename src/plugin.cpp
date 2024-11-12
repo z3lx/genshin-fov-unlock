@@ -1,4 +1,4 @@
-#include "unlocker.h"
+#include "plugin.h"
 #include "config.h"
 #include "filter.h"
 #include "hook.h"
@@ -14,16 +14,16 @@
 
 namespace fs = std::filesystem;
 
-Unlocker& Unlocker::GetInstance() {
-    static Unlocker instance {};
+Plugin& Plugin::GetInstance() {
+    static Plugin instance {};
     return instance;
 }
 
-void Unlocker::SetWorkDir(const fs::path& path) {
+void Plugin::SetWorkDir(const fs::path& path) {
     workDir = path;
 }
 
-void Unlocker::Initialize() {
+void Plugin::Initialize() {
     static bool isInitialized = false;
     if (isInitialized) {
         return;
@@ -39,7 +39,7 @@ void Unlocker::Initialize() {
     isInitialized = true;
 }
 
-void Unlocker::InitializeLogger() {
+void Plugin::InitializeLogger() {
     auto sink = std::make_shared<spdlog::sinks::basic_file_sink_st>(
         (workDir / "log.txt").string(), true);
     logger = std::make_shared<spdlog::logger>("plugin", sink);
@@ -47,7 +47,7 @@ void Unlocker::InitializeLogger() {
     logger->flush_on(spdlog::level::trace);
 }
 
-void Unlocker::InitializeConfig() {
+void Plugin::InitializeConfig() {
     if (const fs::path path = workDir / "fov_config.json";
         fs::exists(path)) {
         try {
@@ -69,7 +69,7 @@ void Unlocker::InitializeConfig() {
     }
 }
 
-void Unlocker::InitializeHook() try {
+void Plugin::InitializeHook() try {
     const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
     const auto isGlobal = GetModuleHandle("GenshinImpact.exe") != nullptr;
     const uintptr_t offset = isGlobal ? 0x1136f30 : 0x1136d30;
@@ -83,7 +83,7 @@ void Unlocker::InitializeHook() try {
     throw;
 }
 
-void Unlocker::InitializeInput() try {
+void Plugin::InitializeInput() try {
     const DWORD tracked = GetCurrentProcessId();
     input.SetTrackedProcess(tracked);
     input.RegisterKeys({
@@ -102,11 +102,11 @@ void Unlocker::InitializeInput() try {
     throw;
 }
 
-void Unlocker::InitializeFilter() noexcept {
+void Plugin::InitializeFilter() noexcept {
     filter.SetTimeConstant(config.smoothing);
 }
 
-void Unlocker::OnKeyDown(const int vKey) try {
+void Plugin::OnKeyDown(const int vKey) try {
     std::lock_guard lock(configMutex);
 
     if (vKey == config.hookKey) {
@@ -136,7 +136,7 @@ void Unlocker::OnKeyDown(const int vKey) try {
     logger->error("Failed to process KeyDown: {}", e.what());
 }
 
-void Unlocker::FilterAndSetFov(void* instance, float value) try {
+void Plugin::FilterAndSetFov(void* instance, float value) try {
     std::lock_guard lock(configMutex);
 
     if (!config.interpolate) {
@@ -193,6 +193,6 @@ void Unlocker::FilterAndSetFov(void* instance, float value) try {
     logger->error("Failed to set FOV: {}", e.what());
 }
 
-void Unlocker::HkSetFov(void* instance, float value) {
+void Plugin::HkSetFov(void* instance, float value) {
     GetInstance().FilterAndSetFov(instance, value);
 }

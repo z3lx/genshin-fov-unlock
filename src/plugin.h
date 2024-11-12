@@ -12,18 +12,18 @@
 #include <memory>
 #include <mutex>
 
-class Unlocker {
+class Plugin {
 public:
-    Unlocker(const Unlocker&) = delete;
-    Unlocker& operator=(const Unlocker&) = delete;
+    Plugin(const Plugin&) = delete;
+    Plugin& operator=(const Plugin&) = delete;
 
-    static Unlocker& GetInstance();
+    static Plugin& GetInstance();
     void SetWorkDir(const std::filesystem::path& path);
     void Initialize();
 
 private:
-    Unlocker() = default;
-    ~Unlocker() = default;
+    Plugin() = default;
+    ~Plugin() = default;
 
     void InitializeLogger();
     void InitializeConfig();

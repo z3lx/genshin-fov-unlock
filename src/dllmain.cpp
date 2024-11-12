@@ -1,4 +1,4 @@
-#include "unlocker.h"
+#include "plugin.h"
 
 std::filesystem::path GetPath(const HMODULE module) {
     char path[MAX_PATH];
@@ -7,9 +7,9 @@ std::filesystem::path GetPath(const HMODULE module) {
 }
 
 void Initialize(HINSTANCE hinstDLL) try {
-    Unlocker& instance = Unlocker::GetInstance();
-    instance.SetWorkDir(GetPath(hinstDLL));
-    instance.Initialize();
+    Plugin& plugin = Plugin::GetInstance();
+    plugin.SetWorkDir(GetPath(hinstDLL));
+    plugin.Initialize();
 } catch (...) {
     // TODO: CLEANUP
     FreeLibraryAndExitThread(hinstDLL, 1);

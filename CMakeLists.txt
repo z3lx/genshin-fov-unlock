@@ -69,8 +69,8 @@ add_library(
     src/hook.h
     src/input.cpp
     src/input.h
-    src/unlocker.cpp
-    src/unlocker.h
+    src/plugin.cpp
+    src/plugin.h
 )
 
 target_include_directories(
