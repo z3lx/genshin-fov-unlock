@@ -14,6 +14,10 @@
 
 namespace fs = std::filesystem;
 
+#define INFO(...) if (logger) { logger->info(__VA_ARGS__); }
+#define ERRO(...) if (logger) { logger->error(__VA_ARGS__); }
+#define CRIT(...) if (logger) { logger->critical(__VA_ARGS__); }
+
 Plugin& Plugin::GetInstance() {
     static Plugin instance {};
     return instance;
@@ -31,20 +35,20 @@ void Plugin::Initialize() {
 
     InitializeLogger();
     InitializeConfig();
-    InitializeHook();
     InitializeInput();
-    InitializeFilter();
-    logger->info("Plugin initialized successfully");
+    InitializeUnlocker();
+    INFO("Plugin initialized successfully");
 
     isInitialized = true;
 }
 
-void Plugin::InitializeLogger() {
-    auto sink = std::make_shared<spdlog::sinks::basic_file_sink_st>(
-        (workDir / "log.txt").string(), true);
-    logger = std::make_shared<spdlog::logger>("plugin", sink);
+void Plugin::InitializeLogger() try {
+    const std::string filename = (workDir / "log.txt").string();
+    logger = spdlog::basic_logger_st("plugin", filename, true);
     logger->set_level(spdlog::level::trace);
     logger->flush_on(spdlog::level::trace);
+} catch (...) {
+    logger = nullptr;
 }
 
 void Plugin::InitializeConfig() {
@@ -52,35 +56,21 @@ void Plugin::InitializeConfig() {
         fs::exists(path)) {
         try {
             config.FromJson(path);
-            logger->info("Config loaded successfully");
+            INFO("Config loaded successfully");
         } catch (const std::exception& e) {
-            logger->error("Failed to load Config: {}", e.what());
-            logger->info("Using plugin defaults");
+            ERRO("Failed to load Config: {}", e.what());
+            INFO("Using plugin defaults");
         }
     } else {
         try {
-            logger->info("Config file not found, creating default Config");
+            INFO("Config file not found, creating default Config");
             config.ToJson(path);
-            logger->info("Default Config created successfully");
+            INFO("Default Config created successfully");
         } catch (const std::exception& e) {
-            logger->error("Failed to create default Config: {}", e.what());
-            logger->info("Using plugin defaults");
+            ERRO("Failed to create default Config: {}", e.what());
+            INFO("Using plugin defaults");
         }
     }
-}
-
-void Plugin::InitializeHook() try {
-    const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
-    const auto isGlobal = GetModuleHandle("GenshinImpact.exe") != nullptr;
-    const uintptr_t offset = isGlobal ? 0x1136f30 : 0x1136d30;
-    const auto target = reinterpret_cast<void*>(module + offset);
-
-    hook.Initialize();
-    hook.Create(target, &HkSetFov);
-    logger->info("Hook initialized successfully");
-} catch (const std::exception& e) {
-    logger->critical("Failed to initialize Hook: {}", e.what());
-    throw;
 }
 
 void Plugin::InitializeInput() try {
@@ -96,14 +86,25 @@ void Plugin::InitializeInput() try {
         this->OnKeyDown(vKey);
     });
     input.StartPolling(30);
-    logger->info("Input initialized successfully");
+    INFO("Input initialized successfully");
 } catch (const std::exception& e) {
-    logger->critical("Failed to initialize Input: {}", e.what());
+    CRIT("Failed to initialize Input: {}", e.what());
     throw;
 }
 
-void Plugin::InitializeFilter() noexcept {
+void Plugin::InitializeUnlocker() try {
+    const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
+    const auto isGlobal = GetModuleHandle("GenshinImpact.exe") != nullptr;
+    const uintptr_t offset = isGlobal ? 0x1136f30 : 0x1136d30;
+    const auto target = reinterpret_cast<void*>(module + offset);
+
+    hook.Initialize();
+    hook.Create(target, &HkSetFov);
     filter.SetTimeConstant(config.smoothing);
+    INFO("Unlocker initialized successfully");
+} catch (const std::exception& e) {
+    CRIT("Failed to initialize Unlocker: {}", e.what());
+    throw;
 }
 
 void Plugin::OnKeyDown(const int vKey) try {
@@ -133,7 +134,7 @@ void Plugin::OnKeyDown(const int vKey) try {
         config.enabled = !config.enabled;
     }
 } catch (const std::exception& e) {
-    logger->error("Failed to process KeyDown: {}", e.what());
+    ERRO("Failed to process KeyDown: {}", e.what());
 }
 
 void Plugin::FilterAndSetFov(void* instance, float value) try {
@@ -190,7 +191,7 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
 
     hook.CallOriginal(instance, value);
 } catch (const std::exception& e) {
-    logger->error("Failed to set FOV: {}", e.what());
+    ERRO("Failed to set FOV: {}", e.what());
 }
 
 void Plugin::HkSetFov(void* instance, float value) {

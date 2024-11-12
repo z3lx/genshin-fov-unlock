@@ -27,9 +27,8 @@ private:
 
     void InitializeLogger();
     void InitializeConfig();
-    void InitializeHook();
     void InitializeInput();
-    void InitializeFilter() noexcept;
+    void InitializeUnlocker();
 
     static void HkSetFov(void* instance, float value);
     void FilterAndSetFov(void* instance, float value);
