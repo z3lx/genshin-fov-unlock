@@ -6,24 +6,36 @@ std::filesystem::path GetPath(const HMODULE module) {
     return std::filesystem::path(path).parent_path();
 }
 
+void Uninitialize(HINSTANCE hinstDLL) {
+    Plugin& plugin = Plugin::GetInstance();
+    plugin.Uninitialize();
+    FreeLibrary(hinstDLL);
+}
+
 void Initialize(HINSTANCE hinstDLL) try {
     Plugin& plugin = Plugin::GetInstance();
     plugin.SetWorkDir(GetPath(hinstDLL));
     plugin.Initialize();
 } catch (...) {
-    // TODO: CLEANUP
-    FreeLibraryAndExitThread(hinstDLL, 1);
+    Uninitialize(hinstDLL);
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     DisableThreadLibraryCalls(hinstDLL);
 
-    if (fdwReason == DLL_PROCESS_ATTACH) {
-        const auto fn = reinterpret_cast<LPTHREAD_START_ROUTINE>(Initialize);
-        const auto args = reinterpret_cast<LPVOID>(hinstDLL);
-        if (const auto handle = CreateThread(nullptr, 0, fn, args, 0, nullptr);
-            handle != nullptr) {
-            CloseHandle(handle);
+    switch (fdwReason) {
+        case DLL_PROCESS_ATTACH: {
+            std::thread([hinstDLL]() {
+                Initialize(hinstDLL);
+            }).detach();
+            break;
+        }
+        case DLL_PROCESS_DETACH: {
+            Uninitialize(hinstDLL);
+            break;
+        }
+        default: {
+            break;
         }
     }
 

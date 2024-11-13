@@ -28,7 +28,7 @@ void Plugin::SetWorkDir(const fs::path& path) {
 }
 
 void Plugin::Initialize() {
-    static bool isInitialized = false;
+    std::lock_guard lock(mutex);
     if (isInitialized) {
         return;
     }
@@ -37,9 +37,24 @@ void Plugin::Initialize() {
     InitializeConfig();
     InitializeInput();
     InitializeUnlocker();
-    INFO("Plugin initialized successfully");
-
     isInitialized = true;
+
+    INFO("Plugin initialized successfully");
+}
+
+void Plugin::Uninitialize() try {
+    std::lock_guard lock(mutex);
+    if (!isInitialized) {
+        return;
+    }
+
+    hook.Uninitialize();
+    input.StopPolling();
+    isInitialized = false;
+
+    INFO("Plugin uninitialized successfully");
+} catch (const std::exception& e) {
+    CRIT("Failed to uninitialize Plugin: {}", e.what());
 }
 
 void Plugin::InitializeLogger() try {
@@ -108,7 +123,7 @@ void Plugin::InitializeUnlocker() try {
 }
 
 void Plugin::OnKeyDown(const int vKey) try {
-    std::lock_guard lock(configMutex);
+    std::lock_guard lock(mutex);
 
     if (vKey == config.hookKey) {
         if (hook.IsEnabled()) {
@@ -134,12 +149,10 @@ void Plugin::OnKeyDown(const int vKey) try {
         config.enabled = !config.enabled;
     }
 } catch (const std::exception& e) {
-    ERRO("Failed to process KeyDown: {}", e.what());
+    ERRO("Failed to process OnKeyDown: {}", e.what());
 }
 
 void Plugin::FilterAndSetFov(void* instance, float value) try {
-    std::lock_guard lock(configMutex);
-
     if (!config.interpolate) {
         if (value == 45.0 && config.enabled) {
             value = static_cast<float>(config.fov);
@@ -195,5 +208,9 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
 }
 
 void Plugin::HkSetFov(void* instance, float value) {
-    GetInstance().FilterAndSetFov(instance, value);
+    Plugin& plugin = GetInstance();
+    std::lock_guard lock(plugin.mutex);
+    if (plugin.hook.IsEnabled()) {
+        plugin.FilterAndSetFov(instance, value);
+    }
 }

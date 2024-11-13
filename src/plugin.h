@@ -20,6 +20,7 @@ public:
     static Plugin& GetInstance();
     void SetWorkDir(const std::filesystem::path& path);
     void Initialize();
+    void Uninitialize();
 
 private:
     Plugin() = default;
@@ -34,6 +35,7 @@ private:
     void FilterAndSetFov(void* instance, float value);
     void OnKeyDown(int vKey);
 
+    bool isInitialized = false;
     std::filesystem::path workDir;
 
     std::shared_ptr<spdlog::logger> logger;
@@ -42,7 +44,7 @@ private:
     InputManager input;
     ExponentialFilter<float> filter;
 
-    std::mutex configMutex;
+    std::mutex mutex;
     int setFovCount = 0;
     uintptr_t firstInstance = 0;
     float firstFov = 0;
