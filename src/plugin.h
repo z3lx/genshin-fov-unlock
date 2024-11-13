@@ -48,4 +48,5 @@ private:
     int setFovCount = 0;
     void* previousInstance = nullptr;
     float previousValue = 0;
+    bool isOriginalFov = false;
 };

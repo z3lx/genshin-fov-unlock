@@ -6,6 +6,7 @@
 
 #include "spdlog/sinks/basic_file_sink.h"
 
+#include <cmath>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -167,7 +168,15 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
             filter.SetInitialValue(value);
         }
         setFovCount = 0;
-        value = filter.Update(static_cast<float>(config.fov));
+
+        const float target = config.enabled ?
+            static_cast<float>(config.fov) : previousValue;
+        const float filtered = filter.Update(target);
+
+        if (config.enabled || !isOriginalFov) {
+            isOriginalFov = std::abs(previousValue - filtered) < 0.1f;
+            value = filtered;
+        }
     } else {
         const auto rep = std::bit_cast<std::uint32_t>(value);
         value = std::bit_cast<float>(rep + 1);
