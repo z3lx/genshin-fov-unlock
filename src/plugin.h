@@ -5,40 +5,46 @@
 #include "hook.h"
 #include "input.h"
 
+#include <spdlog/spdlog.h>
+
 #include <chrono>
 #include <filesystem>
+#include <memory>
 #include <mutex>
 
-class Unlocker {
+class Plugin {
 public:
-    Unlocker(const Unlocker&) = delete;
-    Unlocker& operator=(const Unlocker&) = delete;
+    Plugin(const Plugin&) = delete;
+    Plugin& operator=(const Plugin&) = delete;
 
-    static Unlocker& GetInstance();
+    static Plugin& GetInstance();
     void SetWorkDir(const std::filesystem::path& path);
     void Initialize();
+    void Uninitialize();
 
 private:
-    Unlocker() = default;
-    ~Unlocker() = default;
+    Plugin() = default;
+    ~Plugin() = default;
 
+    void InitializeLogger();
     void InitializeConfig();
-    void InitializeHook();
     void InitializeInput();
-    void InitializeFilter();
+    void InitializeUnlocker();
 
     static void HkSetFov(void* instance, float value);
     void FilterAndSetFov(void* instance, float value);
     void OnKeyDown(int vKey);
 
+    bool isInitialized = false;
     std::filesystem::path workDir;
 
+    std::shared_ptr<spdlog::logger> logger;
     Config config;
     Hook<void, void*, float> hook;
     InputManager input;
     ExponentialFilter<float> filter;
 
-    std::mutex configMutex;
+    std::mutex mutex;
     int setFovCount = 0;
     uintptr_t firstInstance = 0;
     float firstFov = 0;

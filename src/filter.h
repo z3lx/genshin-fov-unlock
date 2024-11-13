@@ -2,7 +2,7 @@
 
 #include <chrono>
 #include <cmath>
-#include <type_traits>
+#include <xtr1common>
 
 template <typename T>
 class ExponentialFilter {
@@ -15,12 +15,12 @@ public:
     explicit ExponentialFilter(
         T timeConstant = static_cast<T>(0),
         T initialValue = static_cast<T>(0)
-    );
-    ~ExponentialFilter() = default;
+    ) noexcept;
+    ~ExponentialFilter() noexcept = default;
 
-    void SetTimeConstant(T value);
-    void SetInitialValue(T value);
-    T Update(T value);
+    void SetTimeConstant(T value) noexcept;
+    void SetInitialValue(T value) noexcept;
+    T Update(T value) noexcept;
 
 private:
     T _timeConstant;
@@ -31,7 +31,7 @@ private:
 template <typename T>
 ExponentialFilter<T>::ExponentialFilter(
     const T timeConstant,
-    const T initialValue)
+    const T initialValue) noexcept
     : _timeConstant(static_cast<T>(0))
     , _lastFilteredValue(static_cast<T>(0)) {
     SetTimeConstant(timeConstant);
@@ -39,18 +39,18 @@ ExponentialFilter<T>::ExponentialFilter(
 }
 
 template <typename T>
-void ExponentialFilter<T>::SetTimeConstant(const T value) {
+void ExponentialFilter<T>::SetTimeConstant(const T value) noexcept {
     _timeConstant = value;
 }
 
 template <typename T>
-void ExponentialFilter<T>::SetInitialValue(const T value) {
+void ExponentialFilter<T>::SetInitialValue(const T value) noexcept {
     _lastFilteredValue = value;
     _lastTime = std::chrono::steady_clock::now();
 }
 
 template <typename T>
-T ExponentialFilter<T>::Update(const T value) {
+T ExponentialFilter<T>::Update(const T value) noexcept {
     // y(k) = alpha * y(k - 1) + (1 - alpha) * x(k)
     // alpha = exp(-T / tau)
 

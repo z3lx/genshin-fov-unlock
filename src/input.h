@@ -15,22 +15,22 @@ class InputManager {
 public:
     using KeyEventCallback = std::function<void(int)>;
 
-    explicit InputManager(DWORD process = 0);
-    ~InputManager();
+    explicit InputManager() noexcept;
+    ~InputManager() noexcept;
 
-    void SetTrackedProcess(DWORD process);
+    void SetTrackedProcess(DWORD process) noexcept;
     void RegisterKeys(std::initializer_list<int> vKeys);
     void RegisterOnKeyDown(const KeyEventCallback& callback);
     void RegisterOnKeyUp(const KeyEventCallback& callback);
 
-    void Poll();
+    void Poll() noexcept;
     void StartPolling(int pollingRate);
-    void StopPolling();
+    void StopPolling() noexcept;
 
 private:
-    void TriggerOnKeyDown(int vKey) const;
-    void TriggerOnKeyUp(int vKey) const;
-    void PollingThread(int pollingRate);
+    void TriggerOnKeyDown(int vKey) const noexcept;
+    void TriggerOnKeyUp(int vKey) const noexcept;
+    void PollingThread(int pollingRate) noexcept;
 
     DWORD _trackedProcess;
     std::set<int> _registeredKeys;
@@ -40,5 +40,6 @@ private:
 
     std::atomic<bool> _isPolling;
     std::thread _pollingThread;
-    std::mutex _pollingMutex;
+    std::mutex _dataMutex;
+    std::mutex _stateMutex;
 };

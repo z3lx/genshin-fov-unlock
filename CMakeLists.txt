@@ -44,6 +44,20 @@ download_and_extract(
     ${JSON_DIR}
 )
 
+# gabime/spdlog
+include(FetchContent)
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG v1.12.0
+)
+FetchContent_GetProperties(spdlog)
+if(NOT spdlog_POPULATED)
+    FetchContent_Populate(spdlog)
+endif()
+add_subdirectory(${spdlog_SOURCE_DIR})
+
+
 add_library(
     genshin_fov_unlock
     SHARED
@@ -51,11 +65,12 @@ add_library(
     src/config.h
     src/dllmain.cpp
     src/filter.h
+    src/hook.cpp
     src/hook.h
     src/input.cpp
     src/input.h
-    src/unlocker.cpp
-    src/unlocker.h
+    src/plugin.cpp
+    src/plugin.h
 )
 
 target_include_directories(
@@ -64,6 +79,7 @@ target_include_directories(
     src
     ${MINHOOK_DIR}/include
     ${JSON_DIR}/include
+    ${spdlog_SOURCE_DIR}/include
 )
 
 target_link_libraries(
