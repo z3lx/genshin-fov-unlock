@@ -7,7 +7,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -45,8 +44,8 @@ private:
     ExponentialFilter<float> filter;
 
     std::mutex mutex;
+
     int setFovCount = 0;
-    uintptr_t firstInstance = 0;
-    float firstFov = 0;
-    std::chrono::time_point<std::chrono::steady_clock> previousTime;
+    void* previousInstance = nullptr;
+    float previousValue = 0;
 };

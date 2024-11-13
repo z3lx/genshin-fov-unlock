@@ -6,8 +6,6 @@
 
 #include "spdlog/sinks/basic_file_sink.h"
 
-#include <chrono>
-#include <cmath>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -161,45 +159,20 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
         return;
     }
 
-    const auto currentTime = std::chrono::steady_clock::now();
-    const auto deltaTime = std::chrono::duration<float, std::milli>(
-        currentTime - previousTime).count();
-    if (deltaTime > config.threshold) {
-        if (setFovCount == 1) {
-            filter.SetInitialValue(firstFov);
+    ++setFovCount;
+
+    if (instance == previousInstance &&
+        value == previousValue) {
+        if (setFovCount > 4) {
+            filter.SetInitialValue(value);
         }
-        previousTime = currentTime;
         setFovCount = 0;
-    }
-
-    setFovCount++;
-    const auto currentInstance = reinterpret_cast<uintptr_t>(instance);
-    switch (setFovCount) {
-        case 1: {
-            firstInstance = currentInstance;
-            firstFov = value;
-            break;
-        }
-        case 2: {
-            if (currentInstance != firstInstance) {
-                break;
-            }
-
-            const auto target = config.enabled
-                ? static_cast<float>(config.fov) : value;
-            const auto filtered = filter.Update(target);
-            const auto isOnTarget = std::abs(filtered - target) < 0.1;
-
-            if (config.enabled || !isOnTarget) {
-                value = filtered;
-            } else {
-                filter.SetInitialValue(firstFov);
-            }
-            break;
-        }
-        default: {
-            break;
-        }
+        value = filter.Update(static_cast<float>(config.fov));
+    } else {
+        const auto rep = std::bit_cast<std::uint32_t>(value);
+        value = std::bit_cast<float>(rep + 1);
+        previousInstance = instance;
+        previousValue = value;
     }
 
     hook.CallOriginal(instance, value);
