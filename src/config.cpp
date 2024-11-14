@@ -13,7 +13,6 @@ constexpr std::string FOV = "fov";
 constexpr std::string FOV_PRESETS = "fov_presets";
 constexpr std::string INTERPOLATE = "interpolate";
 constexpr std::string SMOOTHING = "smoothing";
-constexpr std::string THRESHOLD = "threshold";
 constexpr std::string HOOK_KEY = "hook_key";
 constexpr std::string ENABLE_KEY = "enable_key";
 constexpr std::string NEXT_KEY = "next_key";
@@ -26,7 +25,6 @@ nlohmann::ordered_json Config::ToJson() const noexcept {
         { FOV_PRESETS, fovPresets },
         { INTERPOLATE, interpolate },
         { SMOOTHING, smoothing },
-        { THRESHOLD, threshold },
         { HOOK_KEY, hookKey },
         { ENABLE_KEY, enableKey },
         { PREV_KEY, nextKey },
@@ -51,7 +49,6 @@ void Config::FromJson(const nlohmann::ordered_json& json) {
     json.at(FOV_PRESETS).get_to(config.fovPresets);
     json.at(INTERPOLATE).get_to(config.interpolate);
     json.at(SMOOTHING).get_to(config.smoothing);
-    json.at(THRESHOLD).get_to(config.threshold);
     json.at(HOOK_KEY).get_to(config.hookKey);
     json.at(ENABLE_KEY).get_to(config.enableKey);
     json.at(NEXT_KEY).get_to(config.nextKey);

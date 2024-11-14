@@ -6,7 +6,6 @@
 
 #include "spdlog/sinks/basic_file_sink.h"
 
-#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <memory>
@@ -161,45 +160,28 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
         return;
     }
 
-    const auto currentTime = std::chrono::steady_clock::now();
-    const auto deltaTime = std::chrono::duration<float, std::milli>(
-        currentTime - previousTime).count();
-    if (deltaTime > config.threshold) {
-        if (setFovCount == 1) {
-            filter.SetInitialValue(firstFov);
+    ++setFovCount;
+
+    if (instance == previousInstance &&
+        value == previousValue) {
+        if (setFovCount > 8) {
+            filter.SetInitialValue(value);
         }
-        previousTime = currentTime;
         setFovCount = 0;
-    }
 
-    setFovCount++;
-    const auto currentInstance = reinterpret_cast<uintptr_t>(instance);
-    switch (setFovCount) {
-        case 1: {
-            firstInstance = currentInstance;
-            firstFov = value;
-            break;
-        }
-        case 2: {
-            if (currentInstance != firstInstance) {
-                break;
-            }
+        const float target = config.enabled ?
+            static_cast<float>(config.fov) : previousValue;
+        const float filtered = filter.Update(target);
 
-            const auto target = config.enabled
-                ? static_cast<float>(config.fov) : value;
-            const auto filtered = filter.Update(target);
-            const auto isOnTarget = std::abs(filtered - target) < 0.1;
-
-            if (config.enabled || !isOnTarget) {
-                value = filtered;
-            } else {
-                filter.SetInitialValue(firstFov);
-            }
-            break;
+        if (config.enabled || !isOriginalFov) {
+            isOriginalFov = std::abs(previousValue - filtered) < 0.1f;
+            value = filtered;
         }
-        default: {
-            break;
-        }
+    } else {
+        const auto rep = std::bit_cast<std::uint32_t>(value);
+        value = std::bit_cast<float>(rep + 1);
+        previousInstance = instance;
+        previousValue = value;
     }
 
     hook.CallOriginal(instance, value);
