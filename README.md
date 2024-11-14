@@ -24,7 +24,7 @@ Furthermore, while the plugin itself is lightweight, increasing the field of vie
    1. Open the **unlockfps_nc.exe** executable.
    2. Navigate to **Options** → **Settings** → **DLLs** → **Add**.
    3. Add the path to the **genshin_fov_unlock.dll** file.
-4. (Optional, if there are issues) Modify the plugin's settings.
+4. (Optional) Modify the plugin's settings.
    1. Open the **fov_config.json** file in a text editor.
    2. Modify the settings as desired. Refer to the [**Configuration**](#Configuration) section for more information.
 
@@ -43,7 +43,6 @@ The plugin's behavior and settings can optionally be customized through the **fo
 - `fov_presets` (array of int): List of FOV values to cycle through using keybindings.
 - `interpolate` (bool): Whether to interpolate FOV changes from cycling through presets, character bursts, or other sources. Smoothing and threshold settings are used when interpolation is enabled.
 - `smoothing` (float): Time constant in seconds for the exponential filter. Lower values make the FOV changes more responsive.
-- `threshold` (float): Time in milliseconds to use as a threshold for frame counting. An incorrect value may cause the FOV to fluctuate or not change at all. Default of 3 ms should work for most systems. **If you are on a high-end system and the camera keeps "popping in", consider lowering this value to 2 ms, or disabling interpolation entirely.** See [this issue](https://github.com/z3lx/genshin-fov-unlock/issues/2) for more information.
 - `hook_key` (int): Key to hook the plugin into the game. 
 - `enable_key` (int): Key to enable or disable the plugin.
 - `next_key` (int): Key to cycle to the next FOV preset.
@@ -67,7 +66,6 @@ The default configuration is as follows:
     ],
     "interpolate": true,
     "smoothing": 0.2,
-    "threshold": 3.0,
     "hook_key": 38,
     "enable_key": 40,
     "next_key": 39,
