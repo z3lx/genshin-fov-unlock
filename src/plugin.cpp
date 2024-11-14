@@ -164,7 +164,7 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
 
     if (instance == previousInstance &&
         value == previousValue) {
-        if (setFovCount > 4) {
+        if (setFovCount > 8) {
             filter.SetInitialValue(value);
         }
         setFovCount = 0;
