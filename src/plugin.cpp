@@ -72,6 +72,8 @@ void Plugin::InitializeLogger() {
     csvLogger->set_level(spdlog::level::trace);
     csvLogger->flush_on(spdlog::level::off);
 
+    csvLogger->info("time,camera,fov");
+    csvLogger->flush();
     start = std::chrono::steady_clock::now();
 }
 
