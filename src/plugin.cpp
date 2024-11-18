@@ -3,13 +3,16 @@
 #include "filter.h"
 #include "hook.h"
 #include "input.h"
+#include "sink.h"
 
 #include "spdlog/sinks/basic_file_sink.h"
 
+#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <ranges>
 
 namespace fs = std::filesystem;
 
@@ -56,13 +59,20 @@ void Plugin::Uninitialize() try {
     CRIT("Failed to uninitialize Plugin: {}", e.what());
 }
 
-void Plugin::InitializeLogger() try {
-    const std::string filename = (workDir / "log.txt").string();
+void Plugin::InitializeLogger() {
+    std::string filename = (workDir / "log.txt").string();
     logger = spdlog::basic_logger_st("plugin", filename, true);
     logger->set_level(spdlog::level::trace);
     logger->flush_on(spdlog::level::trace);
-} catch (...) {
-    logger = nullptr;
+
+    filename = (workDir / "values.csv").string();
+    auto sink = std::make_shared<TimeBufferedFileSinkMT>(filename, 10000);
+    csvLogger = std::make_shared<spdlog::logger>("csvLogger", sink);
+    csvLogger->set_pattern("%v");
+    csvLogger->set_level(spdlog::level::trace);
+    csvLogger->flush_on(spdlog::level::off);
+
+    start = std::chrono::steady_clock::now();
 }
 
 void Plugin::InitializeConfig() {
@@ -94,7 +104,8 @@ void Plugin::InitializeInput() try {
         config.hookKey,
         config.enableKey,
         config.nextKey,
-        config.prevKey
+        config.prevKey,
+        config.dumpKey
     });
     input.RegisterOnKeyDown([this](const int vKey) {
         this->OnKeyDown(vKey);
@@ -146,6 +157,8 @@ void Plugin::OnKeyDown(const int vKey) try {
             ? *it : config.fovPresets.back();
     } else if (vKey == config.enableKey) {
         config.enabled = !config.enabled;
+    } else if (vKey == config.dumpKey) {
+        csvLogger->flush();
     }
 } catch (const std::exception& e) {
     ERRO("Failed to process OnKeyDown: {}", e.what());
@@ -183,6 +196,12 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
         previousInstance = instance;
         previousValue = value;
     }
+
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<
+        std::chrono::duration<double> // in seconds
+    >(now - start).count();
+    csvLogger->info("{},{}", elapsed, value);
 
     hook.CallOriginal(instance, value);
 } catch (const std::exception& e) {

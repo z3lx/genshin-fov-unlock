@@ -23,4 +23,5 @@ struct Config {
     int enableKey = VK_DOWN;
     int nextKey = VK_RIGHT;
     int prevKey = VK_LEFT;
+    int dumpKey = VK_F12;
 };

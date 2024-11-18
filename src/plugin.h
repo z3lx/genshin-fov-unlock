@@ -7,6 +7,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -38,6 +39,9 @@ private:
     std::filesystem::path workDir;
 
     std::shared_ptr<spdlog::logger> logger;
+    std::shared_ptr<spdlog::logger> csvLogger;
+    std::chrono::steady_clock::time_point start;
+
     Config config;
     Hook<void, void*, float> hook;
     InputManager input;
