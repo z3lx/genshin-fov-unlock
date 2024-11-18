@@ -201,7 +201,7 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
     auto elapsed = std::chrono::duration_cast<
         std::chrono::duration<double> // in seconds
     >(now - start).count();
-    csvLogger->info("{},{}", elapsed, value);
+    csvLogger->info("{:.9f},{},{:.9f}", elapsed, instance, value);
 
     hook.CallOriginal(instance, value);
 } catch (const std::exception& e) {
