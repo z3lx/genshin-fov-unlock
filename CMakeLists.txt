@@ -71,6 +71,7 @@ add_library(
     src/input.h
     src/plugin.cpp
     src/plugin.h
+    src/sink.h
 )
 
 target_include_directories(
