@@ -3,26 +3,25 @@
 #include "filter.h"
 #include "hook.h"
 #include "input.h"
-#include "sink.h"
-
-#include "spdlog/sinks/basic_file_sink.h"
-
-#include <chrono>
 #include <cmath>
 #include <filesystem>
-#include <memory>
 #include <mutex>
 #include <ranges>
 
-namespace fs = std::filesystem;
-
 #ifdef ENABLE_LOGGING
+#include "sink.h"
+#include <spdlog/sinks/basic_file_sink.h>
+#include <chrono>
+#include <memory>
+
 #define LOG(logger, level, ...) logger->log(level, __VA_ARGS__)
 #define FLUSH(logger) logger->flush()
 #else
 #define LOG(logger, level, ...) ((void)0)
 #define FLUSH(logger) ((void)0)
 #endif
+
+namespace fs = std::filesystem;
 
 Plugin& Plugin::GetInstance() {
     static Plugin instance {};
@@ -39,7 +38,9 @@ void Plugin::Initialize() {
         return;
     }
 
+#ifdef ENABLE_LOGGING
     InitializeLogger();
+#endif
     InitializeConfig();
     InitializeInput();
     InitializeUnlocker();
@@ -63,14 +64,14 @@ void Plugin::Uninitialize() try {
     LOG(logger, spdlog::level::info,
         "Plugin uninitialized successfully"
     );
-} catch (const std::exception& e) {
+} catch ([[maybe_unused]] const std::exception& e) {
     LOG(logger, spdlog::level::critical,
         "Failed to uninitialize Plugin: {}", e.what()
     );
 }
 
-void Plugin::InitializeLogger() {
 #ifdef ENABLE_LOGGING
+void Plugin::InitializeLogger() {
     std::string filename = (workDir / "log.txt").string();
     logger = spdlog::basic_logger_st("plugin", filename, true);
     logger->set_level(spdlog::level::trace);
@@ -86,8 +87,8 @@ void Plugin::InitializeLogger() {
     csvLogger->info("time,camera,fov");
     csvLogger->flush();
     start = std::chrono::steady_clock::now();
-#endif
 }
+#endif
 
 void Plugin::InitializeConfig() {
     if (const fs::path path = workDir / "fov_config.json";
@@ -97,7 +98,7 @@ void Plugin::InitializeConfig() {
             LOG(logger, spdlog::level::info,
                 "Config loaded successfully"
             );
-        } catch (const std::exception& e) {
+        } catch ([[maybe_unused]] const std::exception& e) {
             LOG(logger, spdlog::level::err,
                 "Failed to load Config: {}", e.what()
             );
@@ -114,7 +115,7 @@ void Plugin::InitializeConfig() {
             LOG(logger, spdlog::level::info,
                 "Default Config created successfully"
             );
-        } catch (const std::exception& e) {
+        } catch ([[maybe_unused]] const std::exception& e) {
             LOG(logger, spdlog::level::err,
                 "Failed to create default Config: {}", e.what()
             );
@@ -144,7 +145,7 @@ void Plugin::InitializeInput() try {
     LOG(logger, spdlog::level::info,
         "Input initialized successfully"
     );
-} catch (const std::exception& e) {
+} catch ([[maybe_unused]] const std::exception& e) {
     LOG(logger, spdlog::level::critical,
         "Failed to initialize Input: {}", e.what()
     );
@@ -163,7 +164,7 @@ void Plugin::InitializeUnlocker() try {
     LOG(logger, spdlog::level::info,
         "Unlocker initialized successfully"
     );
-} catch (const std::exception& e) {
+} catch ([[maybe_unused]] const std::exception& e) {
     LOG(logger, spdlog::level::critical,
         "Failed to initialize Unlocker: {}", e.what()
     );
@@ -201,7 +202,7 @@ void Plugin::OnKeyDown(const int vKey) try {
         FLUSH(csvLogger);
     }
 #endif
-} catch (const std::exception& e) {
+} catch ([[maybe_unused]] const std::exception& e) {
     LOG(logger, spdlog::level::err,
         "Failed to process OnKeyDown: {}", e.what()
     );
@@ -251,13 +252,13 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
 #endif
 
     hook.CallOriginal(instance, value);
-} catch (const std::exception& e) {
+} catch ([[maybe_unused]] const std::exception& e) {
     LOG(logger, spdlog::level::err,
         "Failed to set FOV: {}", e.what()
     );
 }
 
-void Plugin::HkSetFov(void* instance, float value) {
+void Plugin::HkSetFov(void* instance, const float value) {
     Plugin& plugin = GetInstance();
     std::lock_guard lock(plugin.mutex);
     if (plugin.hook.IsEnabled()) {

@@ -4,13 +4,14 @@
 #include "filter.h"
 #include "hook.h"
 #include "input.h"
-
-#include <spdlog/spdlog.h>
-
-#include <chrono>
 #include <filesystem>
-#include <memory>
 #include <mutex>
+
+#ifdef ENABLE_LOGGING
+#include <spdlog/spdlog.h>
+#include <chrono>
+#include <memory>
+#endif
 
 class Plugin {
 public:
@@ -26,7 +27,9 @@ private:
     Plugin() = default;
     ~Plugin() = default;
 
+#ifdef ENABLE_LOGGING
     void InitializeLogger();
+#endif
     void InitializeConfig();
     void InitializeInput();
     void InitializeUnlocker();
