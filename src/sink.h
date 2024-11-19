@@ -2,6 +2,7 @@
 
 #include <spdlog/details/file_helper.h>
 #include <spdlog/details/null_mutex.h>
+#include <spdlog/details/synchronous_factory.h>
 #include <spdlog/sinks/base_sink.h>
 
 #include <chrono>
@@ -37,54 +38,29 @@ private:
     std::queue<TimedBuffer> _buffers;
 };
 
-using TimeBufferedFileSinkST = TimeBufferedFileSink<spdlog::details::null_mutex>;
-using TimeBufferedFileSinkMT = TimeBufferedFileSink<std::mutex>;
+using TimeBufferedFileSinkST =
+    TimeBufferedFileSink<spdlog::details::null_mutex>;
+using TimeBufferedFileSinkMT =
+    TimeBufferedFileSink<std::mutex>;
 
-template <typename Mutex>
-TimeBufferedFileSink<Mutex>::TimeBufferedFileSink(
+template<typename Factory = spdlog::synchronous_factory>
+std::shared_ptr<spdlog::logger> TimeBufferedLoggerMt(
+    const std::string& loggerName,
     const std::string& filename,
-    const int bufferDuration)
-    : _bufferDuration(std::chrono::milliseconds(bufferDuration)) {
-    _file.open(filename, true);
+    int bufferDuration) {
+    return Factory::template create<TimeBufferedFileSinkMT>(
+        loggerName, filename, bufferDuration
+    );
 }
 
-template <typename Mutex>
-TimeBufferedFileSink<Mutex>::~TimeBufferedFileSink() {
-    _file.close();
+template<typename Factory = spdlog::synchronous_factory>
+std::shared_ptr<spdlog::logger> TimeBufferedLoggerSt(
+    const std::string& loggerName,
+    const std::string& filename,
+    int bufferDuration) {
+    return Factory::template create<TimeBufferedFileSinkST>(
+        loggerName, filename, bufferDuration
+    );
 }
 
-template <typename Mutex>
-void TimeBufferedFileSink<Mutex>::sink_it_(
-    const spdlog::details::log_msg& msg) {
-    RemoveOldBuffers();
-
-    spdlog::memory_buf_t buffer;
-    spdlog::sinks::base_sink<Mutex>::formatter_->format(msg, buffer);
-    _buffers.emplace(msg.time, std::move(buffer));
-}
-
-template <typename Mutex>
-void TimeBufferedFileSink<Mutex>::flush_() {
-    RemoveOldBuffers();
-
-    while (!_buffers.empty()) {
-        const auto& buffer = _buffers.front().buffer;
-        _file.write(buffer);
-        _buffers.pop();
-    }
-
-    _file.flush();
-}
-
-template <typename Mutex>
-void TimeBufferedFileSink<Mutex>::RemoveOldBuffers() {
-    const auto now = std::chrono::system_clock::now();
-    while (!_buffers.empty()) {
-        auto age = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now - _buffers.front().time);
-        if (age < _bufferDuration) {
-            break;
-        }
-        _buffers.pop();
-    }
-}
+#include "sink-inl.h"
