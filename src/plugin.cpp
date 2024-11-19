@@ -78,7 +78,7 @@ void Plugin::InitializeLogger() {
     logger->flush_on(spdlog::level::trace);
 
     filename = (workDir / "values.csv").string();
-    auto sink = std::make_shared<TimeBufferedFileSinkMT>(filename, 10000);
+    auto sink = std::make_shared<TimeBufferedFileSinkMT>(filename, 10000, true);
     csvLogger = std::make_shared<spdlog::logger>("csvLogger", sink);
     csvLogger->set_pattern("%v");
     csvLogger->set_level(spdlog::level::trace);

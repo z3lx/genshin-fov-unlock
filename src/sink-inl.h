@@ -3,9 +3,10 @@
 template <typename Mutex>
 TimeBufferedFileSink<Mutex>::TimeBufferedFileSink(
     const std::string& filename,
-    const int bufferDuration)
+    const int bufferDuration,
+    const bool truncate)
     : _bufferDuration(std::chrono::milliseconds(bufferDuration)) {
-    _file.open(filename, true);
+    _file.open(filename, truncate);
 }
 
 template <typename Mutex>

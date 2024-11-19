@@ -17,7 +17,8 @@ class TimeBufferedFileSink final : public spdlog::sinks::base_sink<Mutex> {
 public:
     TimeBufferedFileSink(
         const std::string& filename,
-        int bufferDuration // in milliseconds
+        int bufferDuration, // in milliseconds
+        bool truncate = false
     );
     ~TimeBufferedFileSink() override;
 
@@ -47,9 +48,10 @@ template<typename Factory = spdlog::synchronous_factory>
 std::shared_ptr<spdlog::logger> TimeBufferedLoggerMt(
     const std::string& loggerName,
     const std::string& filename,
-    int bufferDuration) {
+    int bufferDuration,
+    bool truncate = false) {
     return Factory::template create<TimeBufferedFileSinkMT>(
-        loggerName, filename, bufferDuration
+        loggerName, filename, bufferDuration, truncate
     );
 }
 
@@ -57,9 +59,10 @@ template<typename Factory = spdlog::synchronous_factory>
 std::shared_ptr<spdlog::logger> TimeBufferedLoggerSt(
     const std::string& loggerName,
     const std::string& filename,
-    int bufferDuration) {
+    int bufferDuration,
+    bool truncate = false) {
     return Factory::template create<TimeBufferedFileSinkST>(
-        loggerName, filename, bufferDuration
+        loggerName, filename, bufferDuration, truncate
     );
 }
 
