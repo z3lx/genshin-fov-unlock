@@ -133,7 +133,9 @@ void Plugin::InitializeInput() try {
         config.enableKey,
         config.nextKey,
         config.prevKey,
+#ifdef ENABLE_LOGGING
         config.dumpKey
+#endif
     });
     input.RegisterOnKeyDown([this](const int vKey) {
         this->OnKeyDown(vKey);
@@ -193,9 +195,12 @@ void Plugin::OnKeyDown(const int vKey) try {
             ? *it : config.fovPresets.back();
     } else if (vKey == config.enableKey) {
         config.enabled = !config.enabled;
-    } else if (vKey == config.dumpKey) {
+    }
+#ifdef ENABLE_LOGGING
+    else if (vKey == config.dumpKey) {
         FLUSH(csvLogger);
     }
+#endif
 } catch (const std::exception& e) {
     LOG(logger, spdlog::level::err,
         "Failed to process OnKeyDown: {}", e.what()

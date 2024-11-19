@@ -23,5 +23,7 @@ struct Config {
     int enableKey = VK_DOWN;
     int nextKey = VK_RIGHT;
     int prevKey = VK_LEFT;
+#ifdef ENABLE_LOGGING
     int dumpKey = VK_F12;
+#endif
 };

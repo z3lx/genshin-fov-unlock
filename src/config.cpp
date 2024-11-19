@@ -17,7 +17,9 @@ constexpr std::string HOOK_KEY = "hook_key";
 constexpr std::string ENABLE_KEY = "enable_key";
 constexpr std::string NEXT_KEY = "next_key";
 constexpr std::string PREV_KEY = "prev_key";
+#ifdef ENABLE_LOGGING
 constexpr std::string DUMP_KEY = "dump_key";
+#endif
 
 nlohmann::ordered_json Config::ToJson() const noexcept {
     return {
@@ -30,7 +32,9 @@ nlohmann::ordered_json Config::ToJson() const noexcept {
         { ENABLE_KEY, enableKey },
         { PREV_KEY, nextKey },
         { PREV_KEY, prevKey },
+#ifdef ENABLE_LOGGING
         { DUMP_KEY, dumpKey }
+#endif
     };
 }
 
@@ -55,7 +59,9 @@ void Config::FromJson(const nlohmann::ordered_json& json) {
     json.at(ENABLE_KEY).get_to(config.enableKey);
     json.at(NEXT_KEY).get_to(config.nextKey);
     json.at(PREV_KEY).get_to(config.prevKey);
+#ifdef ENABLE_LOGGING
     json.at(DUMP_KEY).get_to(config.dumpKey);
+#endif
 
     if (config.fov >= 1 && config.fov <= 179) {
         fov = config.fov;
