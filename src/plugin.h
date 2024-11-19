@@ -30,7 +30,7 @@ private:
 #ifdef ENABLE_LOGGING
     void InitializeLogger();
 #endif
-    void InitializeConfig();
+    void InitializeConfig() noexcept;
     void InitializeInput();
     void InitializeUnlocker();
 
