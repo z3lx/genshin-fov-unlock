@@ -38,9 +38,11 @@ private:
     bool isInitialized = false;
     std::filesystem::path workDir;
 
+#ifdef ENABLE_LOGGING
     std::shared_ptr<spdlog::logger> logger;
     std::shared_ptr<spdlog::logger> csvLogger;
     std::chrono::steady_clock::time_point start;
+#endif
 
     Config config;
     Hook<void, void*, float> hook;

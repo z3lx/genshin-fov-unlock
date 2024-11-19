@@ -16,9 +16,13 @@
 
 namespace fs = std::filesystem;
 
-#define INFO(...) if (logger) { logger->info(__VA_ARGS__); }
-#define ERRO(...) if (logger) { logger->error(__VA_ARGS__); }
-#define CRIT(...) if (logger) { logger->critical(__VA_ARGS__); }
+#ifdef ENABLE_LOGGING
+#define LOG(logger, level, ...) logger->log(level, __VA_ARGS__)
+#define FLUSH(logger) logger->flush()
+#else
+#define LOG(logger, level, ...) ((void)0)
+#define FLUSH(logger) ((void)0)
+#endif
 
 Plugin& Plugin::GetInstance() {
     static Plugin instance {};
@@ -41,7 +45,9 @@ void Plugin::Initialize() {
     InitializeUnlocker();
     isInitialized = true;
 
-    INFO("Plugin initialized successfully");
+    LOG(logger, spdlog::level::info,
+        "Plugin initialized successfully"
+    );
 }
 
 void Plugin::Uninitialize() try {
@@ -54,12 +60,17 @@ void Plugin::Uninitialize() try {
     input.StopPolling();
     isInitialized = false;
 
-    INFO("Plugin uninitialized successfully");
+    LOG(logger, spdlog::level::info,
+        "Plugin uninitialized successfully"
+    );
 } catch (const std::exception& e) {
-    CRIT("Failed to uninitialize Plugin: {}", e.what());
+    LOG(logger, spdlog::level::critical,
+        "Failed to uninitialize Plugin: {}", e.what()
+    );
 }
 
 void Plugin::InitializeLogger() {
+#ifdef ENABLE_LOGGING
     std::string filename = (workDir / "log.txt").string();
     logger = spdlog::basic_logger_st("plugin", filename, true);
     logger->set_level(spdlog::level::trace);
@@ -75,6 +86,7 @@ void Plugin::InitializeLogger() {
     csvLogger->info("time,camera,fov");
     csvLogger->flush();
     start = std::chrono::steady_clock::now();
+#endif
 }
 
 void Plugin::InitializeConfig() {
@@ -82,19 +94,33 @@ void Plugin::InitializeConfig() {
         fs::exists(path)) {
         try {
             config.FromJson(path);
-            INFO("Config loaded successfully");
+            LOG(logger, spdlog::level::info,
+                "Config loaded successfully"
+            );
         } catch (const std::exception& e) {
-            ERRO("Failed to load Config: {}", e.what());
-            INFO("Using plugin defaults");
+            LOG(logger, spdlog::level::err,
+                "Failed to load Config: {}", e.what()
+            );
+            LOG(logger, spdlog::level::info,
+                "Using plugin defaults"
+            );
         }
     } else {
         try {
-            INFO("Config file not found, creating default Config");
+            LOG(logger, spdlog::level::info,
+                "Config file not found, creating default Config"
+            );
             config.ToJson(path);
-            INFO("Default Config created successfully");
+            LOG(logger, spdlog::level::info,
+                "Default Config created successfully"
+            );
         } catch (const std::exception& e) {
-            ERRO("Failed to create default Config: {}", e.what());
-            INFO("Using plugin defaults");
+            LOG(logger, spdlog::level::err,
+                "Failed to create default Config: {}", e.what()
+            );
+            LOG(logger, spdlog::level::info,
+                "Using plugin defaults"
+            );
         }
     }
 }
@@ -113,9 +139,13 @@ void Plugin::InitializeInput() try {
         this->OnKeyDown(vKey);
     });
     input.StartPolling(30);
-    INFO("Input initialized successfully");
+    LOG(logger, spdlog::level::info,
+        "Input initialized successfully"
+    );
 } catch (const std::exception& e) {
-    CRIT("Failed to initialize Input: {}", e.what());
+    LOG(logger, spdlog::level::critical,
+        "Failed to initialize Input: {}", e.what()
+    );
     throw;
 }
 
@@ -128,9 +158,13 @@ void Plugin::InitializeUnlocker() try {
     hook.Initialize();
     hook.Create(target, &HkSetFov);
     filter.SetTimeConstant(config.smoothing);
-    INFO("Unlocker initialized successfully");
+    LOG(logger, spdlog::level::info,
+        "Unlocker initialized successfully"
+    );
 } catch (const std::exception& e) {
-    CRIT("Failed to initialize Unlocker: {}", e.what());
+    LOG(logger, spdlog::level::critical,
+        "Failed to initialize Unlocker: {}", e.what()
+    );
     throw;
 }
 
@@ -160,10 +194,12 @@ void Plugin::OnKeyDown(const int vKey) try {
     } else if (vKey == config.enableKey) {
         config.enabled = !config.enabled;
     } else if (vKey == config.dumpKey) {
-        csvLogger->flush();
+        FLUSH(csvLogger);
     }
 } catch (const std::exception& e) {
-    ERRO("Failed to process OnKeyDown: {}", e.what());
+    LOG(logger, spdlog::level::err,
+        "Failed to process OnKeyDown: {}", e.what()
+    );
 }
 
 void Plugin::FilterAndSetFov(void* instance, float value) try {
@@ -199,15 +235,21 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
         previousValue = value;
     }
 
+#ifdef ENABLE_LOGGING
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<
         std::chrono::duration<double> // in seconds
     >(now - start).count();
-    csvLogger->info("{:.9f},{},{:.9f}", elapsed, instance, value);
+    LOG(csvLogger, spdlog::level::trace,
+        "{:.9f},{},{:.9f}", elapsed, instance, value
+    );
+#endif
 
     hook.CallOriginal(instance, value);
 } catch (const std::exception& e) {
-    ERRO("Failed to set FOV: {}", e.what());
+    LOG(logger, spdlog::level::err,
+        "Failed to set FOV: {}", e.what()
+    );
 }
 
 void Plugin::HkSetFov(void* instance, float value) {
