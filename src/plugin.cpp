@@ -158,7 +158,7 @@ void Plugin::InitializeInput() try {
 void Plugin::InitializeUnlocker() try {
     const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
     const auto global = GetModuleHandle("GenshinImpact.exe") != nullptr;
-    const auto offset = global ? 0x1136f30 : 0x1136d30;
+    const auto offset = global ? 0x13F87C0 : 0x13F38A0;
     const auto target = reinterpret_cast<void*>(module + offset);
 
     hook.Initialize();
