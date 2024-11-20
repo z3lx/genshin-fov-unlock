@@ -17,10 +17,13 @@ struct Config {
     std::vector<int> fovPresets = { 30, 45, 60, 75, 90, 110 };
 
     bool interpolate = true;
-    float smoothing = 0.2;
+    double smoothing = 0.2;
 
     int hookKey = VK_UP;
     int enableKey = VK_DOWN;
     int nextKey = VK_RIGHT;
     int prevKey = VK_LEFT;
+#ifdef ENABLE_LOGGING
+    int dumpKey = VK_F12;
+#endif
 };

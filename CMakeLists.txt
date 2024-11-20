@@ -71,6 +71,8 @@ add_library(
     src/input.h
     src/plugin.cpp
     src/plugin.h
+    src/sink.h
+    src/sink-inl.h
 )
 
 target_include_directories(
@@ -87,3 +89,8 @@ target_link_libraries(
     PRIVATE
     ${MINHOOK_DIR}/lib/libMinHook-x64-v141-mt.lib
 )
+
+option(ENABLE_LOGGING "Enable logging" OFF)
+if (ENABLE_LOGGING)
+    target_compile_definitions(genshin_fov_unlock PRIVATE ENABLE_LOGGING)
+endif()

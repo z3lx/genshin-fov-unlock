@@ -4,12 +4,14 @@
 #include "filter.h"
 #include "hook.h"
 #include "input.h"
-
-#include <spdlog/spdlog.h>
-
 #include <filesystem>
-#include <memory>
 #include <mutex>
+
+#ifdef ENABLE_LOGGING
+#include <spdlog/spdlog.h>
+#include <chrono>
+#include <memory>
+#endif
 
 class Plugin {
 public:
@@ -25,8 +27,10 @@ private:
     Plugin() = default;
     ~Plugin() = default;
 
+#ifdef ENABLE_LOGGING
     void InitializeLogger();
-    void InitializeConfig();
+#endif
+    void InitializeConfig() noexcept;
     void InitializeInput();
     void InitializeUnlocker();
 
@@ -37,7 +41,12 @@ private:
     bool isInitialized = false;
     std::filesystem::path workDir;
 
+#ifdef ENABLE_LOGGING
     std::shared_ptr<spdlog::logger> logger;
+    std::shared_ptr<spdlog::logger> csvLogger;
+    std::chrono::steady_clock::time_point start;
+#endif
+
     Config config;
     Hook<void, void*, float> hook;
     InputManager input;
