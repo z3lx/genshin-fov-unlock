@@ -100,4 +100,4 @@ The compiled **genshin_fov_unlock.dll** library will be located in the **Release
 - Originally inspired from [**genshin-utility**](https://github.com/lanylow/genshin-utility).
 
 ## License
-This project is licensed under the GPL-3.0 License. See the [LICENSE](LICENSE) file for more information.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
