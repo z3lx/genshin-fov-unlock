@@ -1,4 +1,4 @@
-![Game Version](https://img.shields.io/badge/release-version%205.1-brightgreen)
+![Game Version](https://img.shields.io/badge/version-%205.2-brightgreen)
 ![GitHub all releases](https://img.shields.io/github/downloads/z3lx/genshin-fov-unlock/total)
 
 # Genshin Impact FOV Unlocker
@@ -31,7 +31,7 @@ Furthermore, while the plugin itself is lightweight, increasing the field of vie
 The plugin should now be loaded the next time the game is launched with the **genshin-fps-unlock** tool by running the **unlockfps_nc.exe** executable. For more information on how to use the tool, refer to the project's [**README**](https://github.com/34736384/genshin-fps-unlock/blob/netcore/README.md).
 
 ## Usage
-By default, the <kbd>left arrow</kbd> and <kbd>right arrow</kbd> keys cycle through the preset field of view values, and the <kbd>down arrow</kbd> key enables or disables the plugin. Due to the integrity check at the start of the game, it is now also needed to **manually hook the plugin** with the <kbd>up arrow</kbd> key **when in the initial loading screen of the game** as hooking it anywhere else may cause it to crash. Refer to the video below.
+By default, the <kbd>left arrow</kbd> and <kbd>right arrow</kbd> keys cycle through the preset field of view values, and the <kbd>down arrow</kbd> key enables or disables the plugin. Due to the integrity check at the start of the game, it is now also needed to **manually hook the plugin** with the <kbd>up arrow</kbd> key after logging in, ideally **when in the initial loading screen of the game**, as hooking it anywhere else has a non-zero chance to cause it to crash. Refer to the video below. Unhooking and rehooking the plugin can also be done by pressing the <kbd>up arrow</kbd> key again when transitioning between coop and single player mode.
 
 https://github.com/user-attachments/assets/70d59071-addd-47f0-a959-ff8edc58d78c
 
@@ -41,7 +41,7 @@ The plugin's behavior and settings can optionally be customized through the **fo
 - `enabled` (bool): Default state of the plugin when the game starts.
 - `fov` (int): Default FOV to use when the game starts.
 - `fov_presets` (array of int): List of FOV values to cycle through using keybindings.
-- `interpolate` (bool): Whether to interpolate FOV changes from cycling through presets, character bursts, or other sources. Smoothing and threshold settings are used when interpolation is enabled.
+- `interpolate` (bool): Whether to interpolate FOV changes from cycling through presets, character bursts, or other sources. Smoothing settings are used when interpolation is enabled.
 - `smoothing` (float): Time constant in seconds for the exponential filter. Lower values make the FOV changes more responsive.
 - `hook_key` (int): Key to hook the plugin into the game. 
 - `enable_key` (int): Key to enable or disable the plugin.
@@ -94,10 +94,10 @@ cmake --build . --config Release
 The compiled **genshin_fov_unlock.dll** library will be located in the **Release** directory. If you encounter issues with the precompiled MinHook library, consider recompiling it from source.
 
 ## Attributions
-- The offsets used in this project ([line 49 of `unlocker.cpp`](https://github.com/z3lx/genshin-fov-unlock/blob/main/src/unlocker.cpp#L49)) were obtained from the [**genshin-utility**](https://github.com/lanylow/genshin-utility) project, licensed under the GPL-3.0 License.
 - The [**minhook**](https://github.com/TsudaKageyu/minhook) library is used under the BSD-2-Clause.
 - The [**nlohmann/json**](https://github.com/nlohmann/json) library is used under the MIT License.
 - The [**spdlog**](https://github.com/gabime/spdlog) library is used under the MIT License.
+- Originally inspired from [**genshin-utility**](https://github.com/lanylow/genshin-utility).
 
 ## License
-This project is licensed under the GPL-3.0 License. See the [LICENSE](LICENSE) file for more information.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
