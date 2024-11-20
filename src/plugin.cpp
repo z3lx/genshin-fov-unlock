@@ -163,7 +163,8 @@ void Plugin::InitializeUnlocker() try {
 
     hook.Initialize();
     hook.Create(target, &HkSetFov);
-    filter.SetTimeConstant(config.smoothing);
+
+    filter.SetTimeConstant(static_cast<float>(config.smoothing));
 
     LOG(logger, spdlog::level::debug,
         "Module: 0x{:X}", module);

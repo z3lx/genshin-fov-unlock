@@ -30,7 +30,7 @@ nlohmann::ordered_json Config::ToJson() const noexcept {
         { SMOOTHING, smoothing },
         { HOOK_KEY, hookKey },
         { ENABLE_KEY, enableKey },
-        { PREV_KEY, nextKey },
+        { NEXT_KEY, nextKey },
         { PREV_KEY, prevKey },
 #ifdef ENABLE_LOGGING
         { DUMP_KEY, dumpKey }
