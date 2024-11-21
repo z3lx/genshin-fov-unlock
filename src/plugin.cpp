@@ -225,8 +225,15 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
         return;
     }
 
-    if (instance == previousInstance &&
-        (value == previousValue || value == 45.0f)) {
+    ++setFovCount;
+    if (const bool isDefaultFov = value == 45.0f;
+        instance == previousInstance &&
+        (value == previousValue || isDefaultFov)) {
+        if (isDefaultFov) {
+            previousInstance = instance;
+            previousValue = value;
+        }
+
         if (setFovCount > 8) {
             filter.SetInitialValue(value);
         }
@@ -243,11 +250,9 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
     } else {
         const auto rep = std::bit_cast<std::uint32_t>(value);
         value = std::bit_cast<float>(rep + 1); // marker value
+        previousInstance = instance;
+        previousValue = value;
     }
-
-    ++setFovCount;
-    previousInstance = instance;
-    previousValue = value;
 
 #ifdef ENABLE_LOGGING
     const auto now = std::chrono::steady_clock::now();
