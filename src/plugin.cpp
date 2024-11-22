@@ -218,7 +218,7 @@ void Plugin::OnKeyDown(const int vKey) try {
 
 void Plugin::FilterAndSetFov(void* instance, float value) try {
     if (!config.interpolate) {
-        if (value == 45.0 && config.enabled) {
+        if (value == 45.0f && config.enabled) {
             value = static_cast<float>(config.fov);
         }
         hook.CallOriginal(instance, value);
@@ -226,9 +226,14 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
     }
 
     ++setFovCount;
+    if (const bool isDefaultFov = value == 45.0f;
+        instance == previousInstance &&
+        (value == previousValue || isDefaultFov)) {
+        if (isDefaultFov) {
+            previousInstance = instance;
+            previousValue = value;
+        }
 
-    if (instance == previousInstance &&
-        value == previousValue) {
         if (setFovCount > 8) {
             filter.SetInitialValue(value);
         }
@@ -244,14 +249,14 @@ void Plugin::FilterAndSetFov(void* instance, float value) try {
         }
     } else {
         const auto rep = std::bit_cast<std::uint32_t>(value);
-        value = std::bit_cast<float>(rep + 1);
+        value = std::bit_cast<float>(rep + 1); // marker value
         previousInstance = instance;
         previousValue = value;
     }
 
 #ifdef ENABLE_LOGGING
-    auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<
+    const auto now = std::chrono::steady_clock::now();
+    const auto elapsed = std::chrono::duration_cast<
         std::chrono::duration<double> // in seconds
     >(now - start).count();
     LOG(csvLogger, spdlog::level::trace,
