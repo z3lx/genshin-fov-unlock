@@ -41,6 +41,7 @@ add_library(
     src/Config.h
     src/DllMain.cpp
     src/ExponentialFilter.h
+    src/ExponentialFilterInl.h
     src/Hook.cpp
     src/Hook.h
     src/InputManager.cpp
