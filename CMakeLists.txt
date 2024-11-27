@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 
 include(FetchContent)
 
+option(ENABLE_LOGGING "Enable logging" OFF)
+
 # TsudaKageyu/minhook
 FetchContent_Declare(
     minhook
@@ -22,13 +24,15 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(json)
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 
-# gabime/spdlog
-FetchContent_Declare(
-    spdlog
-    GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.12.0
-)
-FetchContent_MakeAvailable(spdlog)
+if (ENABLE_LOGGING)
+    # gabime/spdlog
+    FetchContent_Declare(
+        spdlog
+        GIT_REPOSITORY https://github.com/gabime/spdlog.git
+        GIT_TAG v1.12.0
+    )
+    FetchContent_MakeAvailable(spdlog)
+endif()
 
 add_library(
     genshin_fov_unlock
@@ -43,19 +47,20 @@ add_library(
     src/input.h
     src/plugin.cpp
     src/plugin.h
-    src/sink.h
-    src/sink-inl.h
+    $<$<BOOL:${ENABLE_LOGGING}>:src/sink.h>
+    $<$<BOOL:${ENABLE_LOGGING}>:src/sink-inl.h>
 )
 
 target_link_libraries(
     genshin_fov_unlock
     PRIVATE
     minhook
-    spdlog::spdlog
     nlohmann_json::nlohmann_json
+    $<$<BOOL:${ENABLE_LOGGING}>:spdlog::spdlog>
 )
 
-option(ENABLE_LOGGING "Enable logging" OFF)
-if (ENABLE_LOGGING)
-    target_compile_definitions(genshin_fov_unlock PRIVATE ENABLE_LOGGING)
-endif()
+target_compile_definitions(
+    genshin_fov_unlock
+    PRIVATE
+    $<$<BOOL:${ENABLE_LOGGING}>:ENABLE_LOGGING>
+)
