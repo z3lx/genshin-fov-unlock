@@ -1,9 +1,9 @@
 #pragma once
 
-#include "config.h"
-#include "filter.h"
-#include "hook.h"
-#include "input.h"
+#include "Config.h"
+#include "ExponentialFilter.h"
+#include "Hook.h"
+#include "InputManager.h"
 #include <filesystem>
 #include <mutex>
 

@@ -37,18 +37,18 @@ endif()
 add_library(
     genshin_fov_unlock
     SHARED
-    src/config.cpp
-    src/config.h
-    src/dllmain.cpp
-    src/filter.h
-    src/hook.cpp
-    src/hook.h
-    src/input.cpp
-    src/input.h
-    src/plugin.cpp
-    src/plugin.h
-    $<$<BOOL:${ENABLE_LOGGING}>:src/sink.h>
-    $<$<BOOL:${ENABLE_LOGGING}>:src/sink-inl.h>
+    src/Config.cpp
+    src/Config.h
+    src/DllMain.cpp
+    src/ExponentialFilter.h
+    src/Hook.cpp
+    src/Hook.h
+    src/InputManager.cpp
+    src/InputManager.h
+    src/Plugin.cpp
+    src/Plugin.h
+    $<$<BOOL:${ENABLE_LOGGING}>:src/TimeBufferedFileSink.h>
+    $<$<BOOL:${ENABLE_LOGGING}>:src/TimeBufferedFileSinkInl.h>
 )
 
 target_link_libraries(

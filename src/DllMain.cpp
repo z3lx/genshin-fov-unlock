@@ -1,4 +1,4 @@
-#include "plugin.h"
+#include "Plugin.h"
 
 std::filesystem::path GetPath(const HMODULE module) {
     char path[MAX_PATH];

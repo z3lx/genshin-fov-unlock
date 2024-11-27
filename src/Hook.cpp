@@ -1,4 +1,4 @@
-#include "hook.h"
+#include "Hook.h"
 
 #include <MinHook.h>
 

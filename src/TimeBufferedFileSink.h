@@ -66,4 +66,4 @@ std::shared_ptr<spdlog::logger> TimeBufferedLoggerSt(
     );
 }
 
-#include "sink-inl.h"
+#include "TimeBufferedFileSinkInl.h"

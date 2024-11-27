@@ -1,8 +1,8 @@
-#include "plugin.h"
-#include "config.h"
-#include "filter.h"
-#include "hook.h"
-#include "input.h"
+#include "Plugin.h"
+#include "Config.h"
+#include "ExponentialFilter.h"
+#include "Hook.h"
+#include "InputManager.h"
 #include <cmath>
 #include <filesystem>
 #include <initializer_list>
@@ -13,7 +13,7 @@
 #include <chrono>
 #include <memory>
 #include <spdlog/sinks/basic_file_sink.h>
-#include "sink.h"
+#include "TimeBufferedFileSink.h"
 
 #define LOG(logger, level, ...) \
     if (logger) logger->log(level, __VA_ARGS__)
