@@ -44,6 +44,7 @@ add_library(
     src/ExponentialFilterInl.h
     src/Hook.cpp
     src/Hook.h
+    src/HookInl.h
     src/InputManager.cpp
     src/InputManager.h
     src/Plugin.cpp
