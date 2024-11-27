@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <exception>
 #include <functional>
 #include <initializer_list>
 #include <mutex>

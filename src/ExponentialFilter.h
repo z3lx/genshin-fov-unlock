@@ -1,7 +1,7 @@
 #pragma once
 
 #include <chrono>
-#include <xtr1common>
+#include <type_traits>
 
 template <typename T>
 class ExponentialFilter {

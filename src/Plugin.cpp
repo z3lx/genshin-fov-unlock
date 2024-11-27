@@ -3,17 +3,28 @@
 #include "ExponentialFilter.h"
 #include "Hook.h"
 #include "InputManager.h"
+
+#include <algorithm>
+#include <bit>
 #include <cmath>
+#include <cstdint>
+#include <exception>
 #include <filesystem>
 #include <initializer_list>
 #include <mutex>
 #include <ranges>
+#include <string>
+
+#include <windows.h>
 
 #ifdef ENABLE_LOGGING
+#include "TimeBufferedFileSink.h"
+
+#include <spdlog/common.h>
+#include <spdlog/sinks/basic_file_sink.h>
+
 #include <chrono>
 #include <memory>
-#include <spdlog/sinks/basic_file_sink.h>
-#include "TimeBufferedFileSink.h"
 
 #define LOG(logger, level, ...) \
     if (logger) logger->log(level, __VA_ARGS__)

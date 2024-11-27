@@ -4,11 +4,13 @@
 #include "ExponentialFilter.h"
 #include "Hook.h"
 #include "InputManager.h"
+
 #include <filesystem>
 #include <mutex>
 
 #ifdef ENABLE_LOGGING
-#include <spdlog/spdlog.h>
+#include <spdlog/logger.h>
+
 #include <chrono>
 #include <memory>
 #endif
