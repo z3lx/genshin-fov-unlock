@@ -23,30 +23,30 @@ public:
     T Update(T value) noexcept;
 
 private:
-    T _timeConstant;
-    T _lastFilteredValue;
-    std::chrono::time_point<std::chrono::steady_clock> _lastTime;
+    T timeConstant;
+    T lastFilteredValue;
+    std::chrono::time_point<std::chrono::steady_clock> lastTime;
 };
 
 template <typename T>
 ExponentialFilter<T>::ExponentialFilter(
     const T timeConstant,
     const T initialValue) noexcept
-    : _timeConstant(static_cast<T>(0))
-    , _lastFilteredValue(static_cast<T>(0)) {
+    : timeConstant(static_cast<T>(0))
+    , lastFilteredValue(static_cast<T>(0)) {
     SetTimeConstant(timeConstant);
     SetInitialValue(initialValue);
 }
 
 template <typename T>
 void ExponentialFilter<T>::SetTimeConstant(const T value) noexcept {
-    _timeConstant = value;
+    timeConstant = value;
 }
 
 template <typename T>
 void ExponentialFilter<T>::SetInitialValue(const T value) noexcept {
-    _lastFilteredValue = value;
-    _lastTime = std::chrono::steady_clock::now();
+    lastFilteredValue = value;
+    lastTime = std::chrono::steady_clock::now();
 }
 
 template <typename T>
@@ -60,17 +60,17 @@ T ExponentialFilter<T>::Update(const T value) noexcept {
     // T is delta time between the current and previous time steps
     // tau is the time constant
 
-    if (_timeConstant <= static_cast<T>(0)) {
+    if (timeConstant <= static_cast<T>(0)) {
         return value;
     }
 
     const auto currentTime = std::chrono::steady_clock::now();
     const T deltaTime = std::chrono::duration_cast<std::chrono::duration<T>>(
-        currentTime - _lastTime).count();
-    _lastTime = currentTime;
+        currentTime - lastTime).count();
+    lastTime = currentTime;
 
-    const T alpha = std::exp(-deltaTime / _timeConstant);
-    _lastFilteredValue = alpha * _lastFilteredValue +
+    const T alpha = std::exp(-deltaTime / timeConstant);
+    lastFilteredValue = alpha * lastFilteredValue +
         (static_cast<T>(1) - alpha) * value;
-    return _lastFilteredValue;
+    return lastFilteredValue;
 }

@@ -42,14 +42,14 @@ public:
 private:
     using FuncPtr = Ret(*)(Args...);
 
-    void* _target;
-    void* _original;
+    void* target;
+    void* original;
 };
 
 template <typename Ret, typename... Args>
 Hook<Ret, Args...>::Hook() noexcept
-    : _target(nullptr)
-    , _original(nullptr) { }
+    : target(nullptr)
+    , original(nullptr) { }
 
 template <typename Ret, typename... Args>
 Hook<Ret, Args...>::~Hook() noexcept {
@@ -79,7 +79,7 @@ void Hook<Ret, Args...>::Uninitialize() const {
 
 template <typename Ret, typename... Args>
 bool Hook<Ret, Args...>::IsCreated() const noexcept {
-    return HookShared::IsCreated(_target);
+    return HookShared::IsCreated(target);
 }
 
 template <typename Ret, typename... Args>
@@ -90,40 +90,40 @@ void Hook<Ret, Args...>::Create(void* target, void* detour) {
         );
     }
     Remove();
-    HookShared::Create(target, detour, &_original);
-    _target = target;
+    HookShared::Create(target, detour, &original);
+    this->target = target;
 }
 
 template <typename Ret, typename... Args>
 void Hook<Ret, Args...>::Remove() const {
     if (IsInitialized() && IsCreated()) {
-        HookShared::Remove(_target);
+        HookShared::Remove(target);
     }
 }
 
 template <typename Ret, typename... Args>
 bool Hook<Ret, Args...>::IsEnabled() const noexcept {
-    return HookShared::IsEnabled(_target);
+    return HookShared::IsEnabled(target);
 }
 
 template <typename Ret, typename... Args>
 void Hook<Ret, Args...>::Enable() const {
     if (!IsEnabled()) {
-        HookShared::Enable(_target);
+        HookShared::Enable(target);
     }
 }
 
 template <typename Ret, typename... Args>
 void Hook<Ret, Args...>::Disable() const {
     if (IsInitialized() && IsCreated() && IsEnabled()) {
-        HookShared::Disable(_target);
+        HookShared::Disable(target);
     }
 }
 
 template <typename Ret, typename... Args>
 Ret Hook<Ret, Args...>::CallOriginal(Args... args) const {
     if (IsInitialized() && IsCreated() && IsEnabled()) {
-        return reinterpret_cast<FuncPtr>(_original)(
+        return reinterpret_cast<FuncPtr>(original)(
             std::forward<Args>(args)...
         );
     }

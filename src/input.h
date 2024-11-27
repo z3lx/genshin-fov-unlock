@@ -32,14 +32,14 @@ private:
     void TriggerOnKeyUp(int vKey) const noexcept;
     void PollingThread(int pollingRate) noexcept;
 
-    DWORD _trackedProcess;
-    std::set<int> _registeredKeys;
-    std::unordered_map<int, bool> _keyStates;
-    std::vector<KeyEventCallback> _onKeyDownCallbacks;
-    std::vector<KeyEventCallback> _onKeyUpCallbacks;
+    DWORD trackedProcess;
+    std::set<int> registeredKeys;
+    std::unordered_map<int, bool> keyStates;
+    std::vector<KeyEventCallback> onKeyDownCallbacks;
+    std::vector<KeyEventCallback> onKeyUpCallbacks;
 
-    std::atomic<bool> _isPolling;
-    std::thread _pollingThread;
-    std::mutex _dataMutex;
-    std::mutex _stateMutex;
+    std::atomic<bool> isPolling;
+    std::thread pollingThread;
+    std::mutex dataMutex;
+    std::mutex stateMutex;
 };

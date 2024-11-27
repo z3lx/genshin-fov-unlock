@@ -34,9 +34,9 @@ private:
 
     void RemoveOldBuffers();
 
-    spdlog::details::file_helper _file;
-    std::chrono::milliseconds _bufferDuration;
-    std::queue<TimedBuffer> _buffers;
+    spdlog::details::file_helper file;
+    std::chrono::milliseconds bufferDuration;
+    std::queue<TimedBuffer> buffers;
 };
 
 using TimeBufferedFileSinkST =
