@@ -1,11 +1,11 @@
 // ReSharper disable CppMemberFunctionMayBeStatic
 // NOLINTBEGIN(*-convert-member-functions-to-static)
 
-#include "Unlocker.h"
-#include "Events.h"
-#include "ExponentialFilter.h"
-#include "Hook.h"
-#include "IMediator.h"
+#include "plugin/Unlocker.h"
+#include "plugin/Events.h"
+#include "plugin/IMediator.h"
+#include "utils/ExponentialFilter.h"
+#include "utils/Hook.h"
 
 #include <bit>
 #include <cmath>

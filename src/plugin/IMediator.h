@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IComponent.h"
+#include "plugin/IComponent.h"
 
 #include <memory>
 #include <vector>

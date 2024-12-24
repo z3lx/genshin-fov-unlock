@@ -35,37 +35,61 @@ if (ENABLE_LOGGING)
 endif()
 
 add_library(
+    utils
+    STATIC
+    src/utils/ExponentialFilter.h
+    src/utils/ExponentialFilterInl.h
+    src/utils/FileHandler.cpp
+    src/utils/FileHandler.h
+    src/utils/Hook.cpp
+    src/utils/Hook.h
+    src/utils/HookInl.h
+    $<$<BOOL:${ENABLE_LOGGING}>:src/utils/TimeBufferedFileSink.h>
+    $<$<BOOL:${ENABLE_LOGGING}>:src/utils/TimeBufferedFileSinkInl.h>
+)
+
+target_include_directories(
+    utils
+    PRIVATE
+    src
+)
+
+target_link_libraries(
+    utils
+    PRIVATE
+    minhook
+    $<$<BOOL:${ENABLE_LOGGING}>:spdlog::spdlog>
+)
+
+add_library(
     genshin_fov_unlock
     SHARED
-    src/ConfigManager.cpp
-    src/ConfigManager.h
-    src/DllMain.cpp
-    src/Events.h
-    src/ExponentialFilter.h
-    src/ExponentialFilterInl.h
-    src/FileHandler.cpp
-    src/FileHandler.h
-    src/Hook.cpp
-    src/Hook.h
-    src/HookInl.h
-    src/IComponent.h
-    src/IMediator.h
-    src/InputManager.cpp
-    src/InputManager.h
-    src/Plugin.cpp
-    src/Plugin.h
-    $<$<BOOL:${ENABLE_LOGGING}>:src/TimeBufferedFileSink.h>
-    $<$<BOOL:${ENABLE_LOGGING}>:src/TimeBufferedFileSinkInl.h>
-    src/Unlocker.cpp
-    src/Unlocker.h
+    src/plugin/ConfigManager.cpp
+    src/plugin/ConfigManager.h
+    src/plugin/DllMain.cpp
+    src/plugin/Events.h
+    src/plugin/IComponent.h
+    src/plugin/IMediator.h
+    src/plugin/InputManager.cpp
+    src/plugin/InputManager.h
+    src/plugin/Plugin.cpp
+    src/plugin/Plugin.h
+    src/plugin/Unlocker.cpp
+    src/plugin/Unlocker.h
+)
+
+target_include_directories(
+    genshin_fov_unlock
+    PRIVATE
+    src
 )
 
 target_link_libraries(
     genshin_fov_unlock
     PRIVATE
-    minhook
     nlohmann_json::nlohmann_json
     $<$<BOOL:${ENABLE_LOGGING}>:spdlog::spdlog>
+    utils
 )
 
 target_compile_definitions(

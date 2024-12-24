@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Events.h"
-#include "IComponent.h"
-#include "IMediator.h"
+#include "plugin/Events.h"
+#include "plugin/IComponent.h"
+#include "plugin/IMediator.h"
 
 #include <atomic>
 #include <memory>

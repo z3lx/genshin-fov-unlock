@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Events.h"
-#include "FileHandler.h"
-#include "IComponent.h"
-#include "IMediator.h"
+#include "plugin/Events.h"
+#include "plugin/IComponent.h"
+#include "plugin/IMediator.h"
+#include "utils/FileHandler.h"
 
 #include <memory>
 #include <vector>

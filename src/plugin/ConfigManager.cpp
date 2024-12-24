@@ -1,8 +1,8 @@
-#include "ConfigManager.h"
-#include "Events.h"
-#include "FileHandler.h"
-#include "IComponent.h"
-#include "IMediator.h"
+#include "plugin/ConfigManager.h"
+#include "plugin/Events.h"
+#include "plugin/IComponent.h"
+#include "plugin/IMediator.h"
+#include "utils/FileHandler.h"
 
 #include <nlohmann/json.hpp>
 

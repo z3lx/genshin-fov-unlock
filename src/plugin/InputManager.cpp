@@ -1,7 +1,7 @@
-#include "InputManager.h"
-#include "Events.h"
-#include "IComponent.h"
-#include "IMediator.h"
+#include "plugin/InputManager.h"
+#include "plugin/Events.h"
+#include "plugin/IComponent.h"
+#include "plugin/IMediator.h"
 
 #include <atomic>
 #include <chrono>

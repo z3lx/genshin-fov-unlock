@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Events.h"
-#include "ExponentialFilter.h"
-#include "Hook.h"
-#include "IComponent.h"
-#include "IMediator.h"
+#include "plugin/Events.h"
+#include "plugin/IComponent.h"
+#include "plugin/IMediator.h"
+#include "utils/ExponentialFilter.h"
+#include "utils/Hook.h"
 
 #include <memory>
 #include <mutex>

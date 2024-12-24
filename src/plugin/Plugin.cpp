@@ -1,8 +1,8 @@
-#include "Plugin.h"
-#include "ConfigManager.h"
-#include "FileHandler.h"
-#include "InputManager.h"
-#include "Unlocker.h"
+#include "plugin/Plugin.h"
+#include "plugin/ConfigManager.h"
+#include "plugin/InputManager.h"
+#include "plugin/Unlocker.h"
+#include "utils/FileHandler.h"
 
 #include <exception>
 #include <filesystem>
