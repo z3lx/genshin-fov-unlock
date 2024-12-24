@@ -1,21 +1,24 @@
 #include "InputManager.h"
+#include "Events.h"
+#include "IComponent.h"
+#include "IMediator.h"
 
 #include <atomic>
 #include <chrono>
-#include <exception>
-#include <functional>
-#include <initializer_list>
+#include <memory>
 #include <mutex>
 #include <set>
 #include <stdexcept>
 #include <thread>
 #include <unordered_map>
-#include <vector>
+#include <variant>
 
-#include <windows.h>
+#include <Windows.h>
 
-InputManager::InputManager() noexcept
-    : trackedProcess(0)
+InputManager::InputManager(
+    const std::weak_ptr<IMediator<Event>>& mediator) noexcept
+    : IComponent(mediator)
+    , trackedProcess(0)
     , isPolling(false) { }
 
 InputManager::~InputManager() noexcept {
@@ -27,25 +30,20 @@ void InputManager::SetTrackedProcess(const DWORD process) noexcept {
     trackedProcess = process;
 }
 
-void InputManager::RegisterKeys(const std::initializer_list<int> vKeys) {
+void InputManager::RegisterKeys(const std::vector<int>& vKeys) {
     std::lock_guard lock(dataMutex);
     for (const auto& key : vKeys) {
         registeredKeys.insert(key);
     }
 }
 
-void InputManager::RegisterOnKeyDown(const KeyEventCallback& callback) {
-    std::lock_guard lock(dataMutex);
-    onKeyDownCallbacks.push_back(callback);
-}
-
-void InputManager::RegisterOnKeyUp(const KeyEventCallback& callback) {
-    std::lock_guard lock(dataMutex);
-    onKeyUpCallbacks.push_back(callback);
-}
-
 void InputManager::Poll() noexcept {
     std::lock_guard lock(dataMutex);
+
+    const auto mediator = weakMediator.lock();
+    if (!mediator) {
+        return;
+    }
 
     DWORD foregroundProcess;
     GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
@@ -58,12 +56,12 @@ void InputManager::Poll() noexcept {
         if (GetAsyncKeyState(key) & 0x8000) {
             if (!keyStates[key]) {
                 keyStates[key] = true;
-                TriggerOnKeyDown(key);
+                mediator->Notify(OnKeyDown { key });
             }
         } else {
             if (keyStates[key]) {
                 keyStates[key] = false;
-                TriggerOnKeyUp(key);
+                mediator->Notify(OnKeyUp { key });
             }
         }
     }
@@ -92,26 +90,6 @@ void InputManager::StopPolling() noexcept {
     }
 }
 
-void InputManager::TriggerOnKeyDown(const int vKey) const noexcept {
-    for (const auto& callback : onKeyDownCallbacks) {
-        try {
-            callback(vKey);
-        } catch (const std::exception& e) {
-            // TODO: LOG ERROR
-        }
-    }
-}
-
-void InputManager::TriggerOnKeyUp(const int vKey) const noexcept {
-    for (const auto& callback : onKeyUpCallbacks) {
-        try {
-            callback(vKey);
-        } catch (const std::exception& e) {
-            // TODO: LOG ERROR
-        }
-    }
-}
-
 void InputManager::PollingThread(const int pollingRate) noexcept {
     const auto duration = std::chrono::duration<double, std::milli>(
         1000.0 / pollingRate);
@@ -119,4 +97,16 @@ void InputManager::PollingThread(const int pollingRate) noexcept {
         Poll();
         std::this_thread::sleep_for(duration);
     }
+}
+
+void InputManager::Handle(const Event& event) {
+    std::visit(Visitor { *this }, event);
+}
+
+template <typename T>
+void InputManager::Visitor::operator()(const T& event) const { }
+
+template <>
+void InputManager::Visitor::operator()(const OnKeyBindChange& event) const {
+    m.RegisterKeys(event.vKeys);
 }

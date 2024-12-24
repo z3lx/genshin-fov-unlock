@@ -1,42 +1,46 @@
 #pragma once
 
+#include "Events.h"
+#include "IComponent.h"
+#include "IMediator.h"
+
 #include <atomic>
-#include <functional>
-#include <initializer_list>
+#include <memory>
 #include <mutex>
 #include <set>
 #include <thread>
 #include <unordered_map>
-#include <vector>
 
-#include <windows.h>
+#include <Windows.h>
 
-class InputManager {
+class InputManager final : public IComponent<Event> {
 public:
-    using KeyEventCallback = std::function<void(int)>;
-
-    explicit InputManager() noexcept;
-    ~InputManager() noexcept;
+    explicit InputManager(
+        const std::weak_ptr<IMediator<Event>>& mediator) noexcept;
+    ~InputManager() noexcept override;
 
     void SetTrackedProcess(DWORD process) noexcept;
-    void RegisterKeys(std::initializer_list<int> vKeys);
-    void RegisterOnKeyDown(const KeyEventCallback& callback);
-    void RegisterOnKeyUp(const KeyEventCallback& callback);
+    void RegisterKeys(const std::vector<int>& vKeys);
 
     void Poll() noexcept;
     void StartPolling(int pollingRate);
     void StopPolling() noexcept;
 
+    void Handle(const Event& event) override;
+
 private:
-    void TriggerOnKeyDown(int vKey) const noexcept;
-    void TriggerOnKeyUp(int vKey) const noexcept;
+    struct Visitor {
+        InputManager& m;
+
+        template <typename T>
+        void operator()(const T& event) const;
+    };
+
     void PollingThread(int pollingRate) noexcept;
 
     DWORD trackedProcess;
     std::set<int> registeredKeys;
     std::unordered_map<int, bool> keyStates;
-    std::vector<KeyEventCallback> onKeyDownCallbacks;
-    std::vector<KeyEventCallback> onKeyUpCallbacks;
 
     std::atomic<bool> isPolling;
     std::thread pollingThread;
