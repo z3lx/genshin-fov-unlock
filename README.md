@@ -41,12 +41,12 @@ The plugin's behavior and settings can optionally be customized through the **fo
 - `enabled` (bool): Default state of the plugin when the game starts.
 - `fov` (int): Default FOV to use when the game starts.
 - `fov_presets` (array of int): List of FOV values to cycle through using keybindings.
-- `interpolate` (bool): Whether to interpolate FOV changes from cycling through presets, character bursts, or other sources. Smoothing settings are used when interpolation is enabled.
-- `smoothing` (float): Time constant in seconds for the exponential filter. Lower values make the FOV changes more responsive.
+- `smoothing` (float): Time constant in seconds for the exponential filter. Lower values make the FOV changes more responsive. Set to 0 to disable smoothing.
 - `hook_key` (int): Key to hook the plugin into the game. 
 - `enable_key` (int): Key to enable or disable the plugin.
 - `next_key` (int): Key to cycle to the next FOV preset.
 - `prev_key` (int): Key to cycle to the previous FOV preset.
+- `dump_key` (int): Key to dump the current plugin state to the log. Does nothing if plugin is compiled without logging.
 
 Note: Key codes should be in decimal format. Refer to the [virtual key codes documentation](https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes) for valid values.
 
@@ -64,12 +64,12 @@ The default configuration is as follows:
         90,
         110
     ],
-    "interpolate": true,
     "smoothing": 0.2,
     "hook_key": 38,
     "enable_key": 40,
     "next_key": 39,
-    "prev_key": 37
+    "prev_key": 37,
+    "dump_key": 123
 }
 ```
 
@@ -84,7 +84,7 @@ cd genshin-fov-unlock
 ```
 3. Configure the project (internet connection required for dependencies):
 ```bash
-cmake .
+cmake . -G "Visual Studio 17 2022" -DENABLE_LOGGING=OFF
 ```
 4. Build the project:
 ```bash
@@ -96,7 +96,6 @@ The compiled **genshin_fov_unlock.dll** library will be located in the **Release
 ## Attributions
 - The [**minhook**](https://github.com/TsudaKageyu/minhook) library is used under the BSD-2-Clause.
 - The [**nlohmann/json**](https://github.com/nlohmann/json) library is used under the MIT License.
-- The [**spdlog**](https://github.com/gabime/spdlog) library is used under the MIT License.
 - Originally inspired from [**genshin-utility**](https://github.com/lanylow/genshin-utility).
 
 ## License
