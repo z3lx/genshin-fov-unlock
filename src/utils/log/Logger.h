@@ -83,7 +83,7 @@ public:
         std::source_location location,
         Level level,
         std::string_view fmt, Args&&... args
-    );
+    ) noexcept;
 
 private:
 #if ACTIVE_LEVEL < LEVEL_OFF

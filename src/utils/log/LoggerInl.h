@@ -7,6 +7,7 @@
 #include <memory>
 #include <mutex>
 #include <source_location>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -56,7 +57,7 @@ void Logger::Log(
     const std::thread::id thread,
     const std::source_location location,
     const Level level,
-    const std::string_view fmt, Args&&... args) {
+    const std::string_view fmt, Args&&... args) noexcept try {
 #if ACTIVE_LEVEL < LEVEL_OFF
     std::lock_guard lock { mutex };
     if (this->level > level) {
@@ -73,6 +74,8 @@ void Logger::Log(
         sink->Flush();
     }
 #endif
+} catch (const std::exception& e) {
+    // Ignore exceptions
 }
 
 template<>
@@ -81,7 +84,7 @@ inline void Logger::Log(
     const std::thread::id thread,
     const std::source_location location,
     const Level level,
-    const std::string_view fmt) {
+    const std::string_view fmt) noexcept try {
 #if ACTIVE_LEVEL < LEVEL_OFF
     std::lock_guard lock { mutex };
     if (this->level > level) {
@@ -97,4 +100,6 @@ inline void Logger::Log(
         sink->Flush();
     }
 #endif
+} catch (const std::exception& e) {
+    // Ignore exceptions
 }
