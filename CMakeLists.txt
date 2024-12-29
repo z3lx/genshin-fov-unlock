@@ -3,9 +3,11 @@ project(genshin-fov-unlock)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include(FetchContent)
+if (MSVC)
+    add_compile_options(/Zc:preprocessor)
+endif()
 
-option(ENABLE_LOGGING "Enable logging" OFF)
+include(FetchContent)
 
 # TsudaKageyu/minhook
 FetchContent_Declare(
@@ -24,19 +26,27 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(json)
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 
+option(ENABLE_LOGGING "Enable logging" OFF)
 if (ENABLE_LOGGING)
-    # gabime/spdlog
-    FetchContent_Declare(
-        spdlog
-        GIT_REPOSITORY https://github.com/gabime/spdlog.git
-        GIT_TAG v1.12.0
-    )
-    FetchContent_MakeAvailable(spdlog)
+    add_compile_definitions(ACTIVE_LEVEL=LEVEL_TRACE)
+else()
+    add_compile_definitions(ACTIVE_LEVEL=LEVEL_OFF)
 endif()
 
 add_library(
     utils
     STATIC
+    src/utils/log/formatters/DefaultFormatter.cpp
+    src/utils/log/formatters/DefaultFormatter.h
+    src/utils/log/formatters/IFormatter.h
+    src/utils/log/sinks/ConsoleSink.cpp
+    src/utils/log/sinks/ConsoleSink.h
+    src/utils/log/sinks/FileSink.cpp
+    src/utils/log/sinks/FileSink.h
+    src/utils/log/sinks/ISink.h
+    src/utils/log/Common.h
+    src/utils/log/Logger.h
+    src/utils/log/LoggerInl.h
     src/utils/ExponentialFilter.h
     src/utils/ExponentialFilterInl.h
     src/utils/FileHandler.cpp
@@ -44,8 +54,6 @@ add_library(
     src/utils/Hook.cpp
     src/utils/Hook.h
     src/utils/HookInl.h
-    $<$<BOOL:${ENABLE_LOGGING}>:src/utils/TimeBufferedFileSink.h>
-    $<$<BOOL:${ENABLE_LOGGING}>:src/utils/TimeBufferedFileSinkInl.h>
 )
 
 target_include_directories(
@@ -58,7 +66,6 @@ target_link_libraries(
     utils
     PRIVATE
     minhook
-    $<$<BOOL:${ENABLE_LOGGING}>:spdlog::spdlog>
 )
 
 add_library(
@@ -88,12 +95,5 @@ target_link_libraries(
     genshin_fov_unlock
     PRIVATE
     nlohmann_json::nlohmann_json
-    $<$<BOOL:${ENABLE_LOGGING}>:spdlog::spdlog>
     utils
-)
-
-target_compile_definitions(
-    genshin_fov_unlock
-    PRIVATE
-    $<$<BOOL:${ENABLE_LOGGING}>:ENABLE_LOGGING>
 )

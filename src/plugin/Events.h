@@ -19,6 +19,9 @@ struct OnSmoothingChange {
     const double smoothing;
 };
 
+struct OnDumpBuffer {
+};
+
 struct OnKeyBindChange {
     const std::vector<int> vKeys;
 };
@@ -32,6 +35,6 @@ struct OnKeyUp {
 };
 
 using Event = std::variant<
-    OnCreateToggle, OnEnableToggle, OnFovChange, OnSmoothingChange,
+    OnCreateToggle, OnEnableToggle, OnFovChange, OnSmoothingChange, OnDumpBuffer,
     OnKeyBindChange, OnKeyDown, OnKeyUp
 >;

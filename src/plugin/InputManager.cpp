@@ -2,6 +2,7 @@
 #include "plugin/Events.h"
 #include "plugin/IComponent.h"
 #include "plugin/IMediator.h"
+#include "utils/log/Logger.h"
 
 #include <atomic>
 #include <chrono>
@@ -19,10 +20,13 @@ InputManager::InputManager(
     const std::weak_ptr<IMediator<Event>>& mediator) noexcept
     : IComponent(mediator)
     , trackedProcess(0)
-    , isPolling(false) { }
+    , isPolling(false) {
+    LOG_I("InputManager initialized");
+}
 
 InputManager::~InputManager() noexcept {
     StopPolling();
+    LOG_I("InputManager uninitialized");
 }
 
 void InputManager::SetTrackedProcess(const DWORD process) noexcept {
@@ -37,11 +41,12 @@ void InputManager::RegisterKeys(const std::vector<int>& vKeys) {
     }
 }
 
-void InputManager::Poll() noexcept {
+void InputManager::Poll() noexcept try {
     std::lock_guard lock(dataMutex);
 
     const auto mediator = weakMediator.lock();
     if (!mediator) {
+        LOG_E("Mediator is expired");
         return;
     }
 
@@ -56,15 +61,29 @@ void InputManager::Poll() noexcept {
         if (GetAsyncKeyState(key) & 0x8000) {
             if (!keyStates[key]) {
                 keyStates[key] = true;
-                mediator->Notify(OnKeyDown { key });
+                try {
+                    LOG_D("Notifying OnKeyDown event with vKey = {}", key);
+                    mediator->Notify(OnKeyDown { key });
+                    LOG_D("OnKeyDown event notified");
+                } catch (const std::exception& e) {
+                    LOG_E("Failed to notify OnKeyDown event: {}", e.what());
+                }
             }
         } else {
             if (keyStates[key]) {
                 keyStates[key] = false;
-                mediator->Notify(OnKeyUp { key });
+                try {
+                    LOG_D("Notifying OnKeyUp event with vKey = {}", key);
+                    mediator->Notify(OnKeyUp { key });
+                    LOG_D("OnKeyUp event notified");
+                } catch (const std::exception& e) {
+                    LOG_E("Failed to notify OnKeyUp event: {}", e.what());
+                }
             }
         }
     }
+} catch (const std::exception& e) {
+    LOG_E("Failed to poll input: {}", e.what());
 }
 
 void InputManager::StartPolling(const int pollingRate) {
@@ -107,6 +126,11 @@ template <typename T>
 void InputManager::Visitor::operator()(const T& event) const { }
 
 template <>
-void InputManager::Visitor::operator()(const OnKeyBindChange& event) const {
+void InputManager::Visitor::operator()(const OnKeyBindChange& event) const try {
+    LOG_D("Handling OnKeyBindChange event with {} vKeys", event.vKeys.size());
     m.RegisterKeys(event.vKeys);
+    LOG_D("OnKeyBindChange event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnKeyBindChange event: {}", e.what());
+    throw;
 }

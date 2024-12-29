@@ -6,20 +6,27 @@
 #include "plugin/IMediator.h"
 #include "utils/ExponentialFilter.h"
 #include "utils/Hook.h"
+#include "utils/log/Logger.h"
+
+#include <nlohmann/json.hpp>
 
 #include <bit>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <queue>
+#include <string>
+#include <tuple>
 #include <variant>
+#include <vector>
 
 #include <Windows.h>
 
 constexpr auto OFFSET_GL = 0x13F87C0;
 constexpr auto OFFSET_CN = 0x13F38A0;
 
-Unlocker* Unlocker::unlocker = nullptr;
 std::mutex Unlocker::mutex {};
 Hook<void, void*, float> Unlocker::hook {};
 ExponentialFilter<float> Unlocker::filter {};
@@ -34,6 +41,7 @@ bool Unlocker::isPreviousFov = false;
 
 Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
     : IComponent(mediator) {
+    LOG_D("Initializing unlocker");
     std::lock_guard lock(mutex);
 
     // TODO: Refactor GetModuleHandle redundancy
@@ -43,17 +51,27 @@ Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
     const auto target = reinterpret_cast<void*>(module + offset);
     const auto detour = reinterpret_cast<void*>(HkSetFieldOfView);
 
+    LOG_D(
+        "Creating hook with target = 0x{:X}, detour = 0x{:X}",
+        reinterpret_cast<uintptr_t>(target), reinterpret_cast<uintptr_t>(detour)
+    );
+
     hook.Initialize();
     hook.Create(target, detour);
-    unlocker = this;
+
+    LOG_I("Unlocker initialized");
 } catch (const std::exception& e) {
-    // TODO: LOG ERROR
+    LOG_E("Failed to initialize unlocker: {}", e.what());
 }
 
-Unlocker::~Unlocker() {
+Unlocker::~Unlocker() try {
+    LOG_D("Uninitializing unlocker");
     std::lock_guard lock(mutex);
     hook.Uninitialize();
-    unlocker = nullptr;
+    LOG_I("Unlocker uninitialized");
+} catch (const std::exception& e) {
+    LOG_E("Failed to uninitialize unlocker: {}", e.what());
+    throw;
 }
 
 bool Unlocker::IsCreated() const noexcept {
@@ -88,7 +106,7 @@ void Unlocker::SetSmoothing(const float value) noexcept {
 void Unlocker::HkSetFieldOfView(void* instance, float value) noexcept {
     std::lock_guard lock(mutex);
     try {
-        if (!hook.IsEnabled() || !unlocker) {
+        if (!hook.IsEnabled()) {
             return;
         }
 
@@ -121,9 +139,10 @@ void Unlocker::HkSetFieldOfView(void* instance, float value) noexcept {
             previousFov = value;
         }
 
+        AddToBuffer(instance, value);
         hook.CallOriginal(instance, value);
     } catch (const std::exception& e) {
-        // TODO: LOG ERROR
+        LOG_E("Failed to set field of view: {}", e.what());
     }
 }
 
@@ -135,23 +154,95 @@ template <typename T>
 void Unlocker::Visitor::operator()(const T& event) const { }
 
 template <>
-void Unlocker::Visitor::operator()(const OnCreateToggle& event) const {
+void Unlocker::Visitor::operator()(const OnCreateToggle& event) const try {
+    LOG_D("Handling OnCreateToggle event with created = {}", event.created);
     m.Create(event.created);
+    LOG_D("OnCreateToggle event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnCreateToggle event: {}", e.what());
+    throw;
 }
 
 template <>
-void Unlocker::Visitor::operator()(const OnEnableToggle& event) const {
+void Unlocker::Visitor::operator()(const OnEnableToggle& event) const try {
+    LOG_D("Handling OnEnableToggle event with enabled = {}", event.enabled);
     m.Enable(event.enabled);
+    LOG_D("OnEnableToggle event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnEnableToggle event: {}", e.what());
+    throw;
 }
 
 template <>
-void Unlocker::Visitor::operator()(const OnFovChange& event) const {
+void Unlocker::Visitor::operator()(const OnFovChange& event) const try {
+    LOG_D("Handling OnFovChange event with fov = {}", event.fov);
     m.SetFieldOfView(event.fov);
+    LOG_D("OnFovChange event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnFovChange event: {}", e.what());
+    throw;
 }
 
 template <>
-void Unlocker::Visitor::operator()(const OnSmoothingChange& event) const {
+void Unlocker::Visitor::operator()(const OnSmoothingChange& event) const try {
+    LOG_D("Handling OnSmoothingChange event with smoothing = {}", event.smoothing);
     m.SetSmoothing(static_cast<float>(event.smoothing));
+    LOG_D("OnSmoothingChange event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnSmoothingChange event: {}", e.what());
+    throw;
+}
+
+template<>
+void Unlocker::Visitor::operator()(const OnDumpBuffer& event) const try {
+    LOG_D("Handling OnDumpBuffer event");
+    LOG_D(DumpBuffer());
+    LOG_D("OnDumpBuffer event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnDumpBuffer event: {}", e.what());
+    throw;
+}
+
+namespace sc = std::chrono;
+
+std::queue<std::tuple<
+    sc::steady_clock::time_point, uintptr_t, float>
+> Unlocker::buffer {};
+
+void Unlocker::AddToBuffer(void* instance, const float value) {
+    const auto now = sc::steady_clock::now();
+    while (!buffer.empty()) {
+        const auto [time, instance, value] = buffer.front();
+        if (const auto elapsed = now - time;
+            elapsed < sc::seconds(10)) {
+            break;
+        }
+        buffer.pop();
+    }
+    buffer.emplace(now, reinterpret_cast<uintptr_t>(instance), value);
+}
+
+std::string Unlocker::DumpBuffer() {
+    using namespace nlohmann;
+
+    std::lock_guard lock(mutex);
+    if (buffer.empty()) {
+        return "[]";
+    }
+
+    ordered_json j = ordered_json::array();
+    const auto firstTime = std::get<0>(buffer.front());
+    while (!buffer.empty()) {
+        const auto [time, instance, value] = buffer.front();
+        const auto elapsed = sc::duration<double>(time - firstTime).count();
+        j.push_back({
+            { "time", elapsed },
+            { "instance", instance },
+            { "value", value }
+        });
+        buffer.pop();
+    }
+    return j.dump();
 }
 
 // NOLINTEND(*-convert-member-functions-to-static)

@@ -3,6 +3,8 @@
 #include "plugin/InputManager.h"
 #include "plugin/Unlocker.h"
 #include "utils/FileHandler.h"
+#include "utils/log/Logger.h"
+#include "utils/log/sinks/FileSink.h"
 
 #include <exception>
 #include <filesystem>
@@ -17,12 +19,19 @@ void Plugin::Initialize() try {
     if (plugin) {
         return;
     }
+
+    LOG_D("Initializing plugin");
+    LOG_D("Working directory: {}", GetPath().string());
     plugin = std::shared_ptr<Plugin>(new Plugin());
+
+    LOG_SET_LEVEL(Level::Trace);
+    LOG_SET_SINKS(
+        std::make_unique<FileSink>(GetPath() / "logs.txt", true)
+    );
 
     auto unlocker = std::make_unique<Unlocker>(plugin);
     plugin->components.push_back(std::move(unlocker));
 
-    // TODO: REPLACE WITH EVENTS
     auto input = std::make_unique<InputManager>(plugin);
     input->SetTrackedProcess(0);
     input->StartPolling(30);
@@ -33,13 +42,19 @@ void Plugin::Initialize() try {
     auto config = std::make_unique<ConfigManager>(plugin, fileHandler);
     config->Load();
     plugin->components.push_back(std::move(config));
+
+    LOG_I("Plugin initialized");
 } catch (const std::exception& e) {
-    // TODO: LOG ERROR
+    LOG_F("Failed to initialize plugin: {}", e.what());
     Uninitialize();
 }
 
-void Plugin::Uninitialize() {
+void Plugin::Uninitialize() try {
+    LOG_D("Uninitializing plugin");
     plugin = nullptr;
+    LOG_I("Plugin uninitialized");
+} catch (const std::exception& e) {
+    LOG_F("Failed to uninitialize plugin: {}", e.what());
 }
 
 namespace fs = std::filesystem;

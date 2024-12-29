@@ -6,8 +6,13 @@
 #include "utils/ExponentialFilter.h"
 #include "utils/Hook.h"
 
+#include <chrono>
+#include <cstdint>
 #include <memory>
 #include <mutex>
+#include <queue>
+#include <string>
+#include <tuple>
 
 class Unlocker final : public IComponent<Event> {
 public:
@@ -34,7 +39,6 @@ private:
 
     static void HkSetFieldOfView(void* instance, float value) noexcept;
 
-    static Unlocker* unlocker;
     static std::mutex mutex;
     static Hook<void, void*, float> hook;
     static ExponentialFilter<float> filter;
@@ -46,4 +50,11 @@ private:
     static void* previousInstance;
     static float previousFov;
     static bool isPreviousFov;
+
+    static void AddToBuffer(void* instance, float value);
+    static std::string DumpBuffer();
+
+    static std::queue<std::tuple<
+        std::chrono::steady_clock::time_point, uintptr_t, float
+    >> buffer;
 };

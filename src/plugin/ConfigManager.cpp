@@ -3,6 +3,7 @@
 #include "plugin/IComponent.h"
 #include "plugin/IMediator.h"
 #include "utils/FileHandler.h"
+#include "utils/log/Logger.h"
 
 #include <nlohmann/json.hpp>
 
@@ -12,7 +13,7 @@
 #include <ranges>
 #include <utility>
 
-constexpr auto CONFIG_FILENAME = "fps_config.json";
+constexpr auto CONFIG_FILENAME = "fov_config.json";
 
 constexpr auto ENABLED = "enabled";
 constexpr auto FOV = "fov";
@@ -27,13 +28,19 @@ constexpr auto DUMP_KEY = "dump_key";
 ConfigManager::ConfigManager(
     const std::weak_ptr<IMediator<Event>>& mediator,
     std::unique_ptr<FileHandler>& fileHandler) noexcept
-    : IComponent(mediator), fileHandler(std::move(fileHandler)) { }
+    : IComponent(mediator), fileHandler(std::move(fileHandler)) {
+    LOG_I("ConfigManager initialized");
+}
 
-ConfigManager::~ConfigManager() noexcept = default;
+ConfigManager::~ConfigManager() noexcept {
+    LOG_I("ConfigManager uninitialized");
+}
 
 void ConfigManager::Load() try {
+    LOG_D("Loading config from {}", CONFIG_FILENAME);
     const auto mediator = weakMediator.lock();
     if (!mediator) {
+        LOG_E("Mediator is expired");
         return;
     }
 
@@ -55,9 +62,9 @@ void ConfigManager::Load() try {
         j.at(PREV_KEY).get_to(prevKey);
         j.at(DUMP_KEY).get_to(dumpKey);
     } catch (const std::exception& e) {
-        // TODO: LOG ERROR
+        LOG_E("Failed to parse config: {}", e.what());
+        LOG_I("Using default config values");
         config = {};
-        Save();
     }
 
     // TODO: VALIDATIONS
@@ -69,11 +76,15 @@ void ConfigManager::Load() try {
     mediator->Notify(OnKeyBindChange {
         { createKey, enableKey, nextKey, prevKey, dumpKey }
     });
+    LOG_I("Config loaded");
 } catch (const std::exception& e) {
-    // TODO: LOG ERROR
+    LOG_F("Failed to load config: {}", e.what());
+    throw;
 }
 
 void ConfigManager::Save() try {
+    LOG_D("Saving config to {}", CONFIG_FILENAME);
+
     auto& [created, enabled, fov, fovPresets, smoothing,
         createKey, enableKey, nextKey, prevKey, dumpKey] = config;
 
@@ -92,8 +103,10 @@ void ConfigManager::Save() try {
     fileHandler->Open(CONFIG_FILENAME, true);
     fileHandler->Write(j.dump(4));
     fileHandler->Close();
+    LOG_I("Config saved");
 } catch (const std::exception& e) {
-    // TODO: LOG ERROR
+    LOG_E("Failed to save config: {}", e.what());
+    throw;
 }
 
 void ConfigManager::Handle(const Event& event) {
@@ -104,9 +117,11 @@ template <typename T>
 void ConfigManager::Visitor::operator()(const T& event) const { }
 
 template <>
-void ConfigManager::Visitor::operator()(const OnKeyDown& event) const {
+void ConfigManager::Visitor::operator()(const OnKeyDown& event) const try {
+    LOG_D("Handling OnKeyDown event with vKey = {}", event.vKey);
     const auto mediator = m.weakMediator.lock();
     if (!mediator) {
+        LOG_E("Mediator is expired");
         return;
     }
 
@@ -114,31 +129,38 @@ void ConfigManager::Visitor::operator()(const OnKeyDown& event) const {
         createKey, enableKey, nextKey, prevKey, dumpKey] = m.config;
 
     if (event.vKey == createKey) {
-        // TODO: FIX TOGGLE
-        created = true;
-        mediator->Notify(OnCreateToggle { true });
+        const auto value = !created;
+        mediator->Notify(OnCreateToggle { .created = value });
+        created = value;
     } else if (event.vKey == enableKey) {
-        enabled = !enabled;
-        mediator->Notify(OnEnableToggle { enabled });
-    }
-
-    if (!created || !enabled) {
+        const auto value = !enabled;
+        mediator->Notify(OnEnableToggle { .enabled = value });
+        enabled = value;
+    } else if (event.vKey == dumpKey) {
+        mediator->Notify(OnDumpBuffer {});
+    } else if (!created || !enabled) {
+        LOG_D("Event ignored due to disabled state");
         return;
-    }
-
-    if (event.vKey == nextKey) {
+    } else if (event.vKey == nextKey) {
         const auto it = std::ranges::find_if(
             fovPresets,
             [&](const int fovPreset) { return fov < fovPreset; }
         );
-        fov = it != fovPresets.end() ? *it : fovPresets.front();
-        mediator->Notify(OnFovChange { fov });
+        const auto value = it != fovPresets.end() ? *it : fovPresets.front();
+        mediator->Notify(OnFovChange { .fov = value });
+        fov = value;
     } else if (event.vKey == prevKey) {
         const auto it = std::ranges::find_if(
             fovPresets | std::views::reverse,
             [&](const int fovPreset) { return fov > fovPreset; }
         );
-        fov = it != fovPresets.rend() ? *it : fovPresets.back();
-        mediator->Notify(OnFovChange { fov });
+        const auto value = it != fovPresets.rend() ? *it : fovPresets.back();
+        mediator->Notify(OnFovChange { .fov = value });
+        fov = value;
     }
+
+    LOG_D("OnKeyDown event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnKeyDown event: {}", e.what());
+    throw;
 }
