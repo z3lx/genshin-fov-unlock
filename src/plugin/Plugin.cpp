@@ -9,7 +9,10 @@
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <thread>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 #include <Windows.h>
 
@@ -32,9 +35,7 @@ void Plugin::Initialize() try {
     auto unlocker = std::make_unique<Unlocker>(plugin);
     plugin->components.push_back(std::move(unlocker));
 
-    auto input = std::make_unique<InputManager>(plugin);
-    input->SetTrackedProcess(0);
-    input->StartPolling(30);
+    auto input = std::make_unique<InputManager>(plugin, GetWindows());
     plugin->components.push_back(std::move(input));
 
     auto fileHandler = std::make_unique<FileHandler>();
@@ -77,6 +78,30 @@ fs::path Plugin::GetPath() {
     GetModuleFileName(module, buffer, MAX_PATH);
     path = fs::path(buffer).parent_path();
     return path;
+}
+
+std::vector<HWND> Plugin::GetWindows() {
+    DWORD targetProcessId = GetCurrentProcessId();
+    std::vector<HWND> targetWindows {};
+    std::tuple params = std::tie(targetProcessId, targetWindows);
+
+    auto callback = [](HWND hwnd, LPARAM lParam) -> BOOL {
+        auto& [targetProcessId, targetWindows] = *reinterpret_cast<
+            std::tuple<DWORD&, std::vector<HWND>&>*>(lParam);
+
+        DWORD processId;
+        GetWindowThreadProcessId(hwnd, &processId);
+        if (processId == targetProcessId) {
+            targetWindows.push_back(hwnd);
+        }
+        return TRUE;
+    };
+
+    while (targetWindows.empty()) {
+        EnumWindows(callback, reinterpret_cast<LPARAM>(&params));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    return targetWindows;
 }
 
 Plugin::Plugin() = default;

@@ -4,27 +4,19 @@
 #include "plugin/IComponent.h"
 #include "plugin/IMediator.h"
 
-#include <atomic>
 #include <memory>
 #include <mutex>
-#include <set>
-#include <thread>
-#include <unordered_map>
+#include <vector>
 
 #include <Windows.h>
 
 class InputManager final : public IComponent<Event> {
 public:
     explicit InputManager(
-        const std::weak_ptr<IMediator<Event>>& mediator) noexcept;
-    ~InputManager() noexcept override;
-
-    void SetTrackedProcess(DWORD process) noexcept;
-    void RegisterKeys(const std::vector<int>& vKeys);
-
-    void Poll() noexcept;
-    void StartPolling(int pollingRate);
-    void StopPolling() noexcept;
+        const std::weak_ptr<IMediator<Event>>& mediator,
+        const std::vector<HWND>& targetWindows = {}
+    );
+    ~InputManager() override;
 
     void Handle(const Event& event) override;
 
@@ -36,14 +28,18 @@ private:
         void operator()(const T& event) const;
     };
 
-    void PollingThread(int pollingRate) noexcept;
+    static HHOOK SetHook();
+    static void RemoveHook(HHOOK& handle) noexcept;
+    static void ProcessMessages() noexcept;
 
-    DWORD trackedProcess;
-    std::set<int> registeredKeys;
-    std::unordered_map<int, bool> keyStates;
+    static LRESULT CALLBACK KeyboardProc(
+        int nCode, WPARAM wParam, LPARAM lParam
+    ) noexcept;
+    static void Notify(const Event& event) noexcept;
 
-    std::atomic<bool> isPolling;
-    std::thread pollingThread;
-    std::mutex dataMutex;
-    std::mutex stateMutex;
+    static HHOOK hHook;
+    static std::mutex mutex;
+    static std::vector<InputManager*> instances;
+
+    std::vector<HWND> targetWindows;
 };

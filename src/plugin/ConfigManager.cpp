@@ -73,9 +73,6 @@ void ConfigManager::Load() try {
     mediator->Notify(OnEnableToggle { enabled });
     mediator->Notify(OnFovChange { fov });
     mediator->Notify(OnSmoothingChange { smoothing });
-    mediator->Notify(OnKeyBindChange {
-        { createKey, enableKey, nextKey, prevKey, dumpKey }
-    });
     LOG_I("Config loaded");
 } catch (const std::exception& e) {
     LOG_F("Failed to load config: {}", e.what());

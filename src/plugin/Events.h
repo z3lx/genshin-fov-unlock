@@ -22,10 +22,6 @@ struct OnSmoothingChange {
 struct OnDumpBuffer {
 };
 
-struct OnKeyBindChange {
-    const std::vector<int> vKeys;
-};
-
 struct OnKeyDown {
     const int vKey;
 };
@@ -36,5 +32,5 @@ struct OnKeyUp {
 
 using Event = std::variant<
     OnCreateToggle, OnEnableToggle, OnFovChange, OnSmoothingChange, OnDumpBuffer,
-    OnKeyBindChange, OnKeyDown, OnKeyUp
+    OnKeyDown, OnKeyUp
 >;
