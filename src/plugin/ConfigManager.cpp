@@ -129,13 +129,14 @@ void ConfigManager::Visitor::operator()(const OnKeyDown& event) const try {
         const auto value = !created;
         mediator->Notify(OnCreateToggle { .created = value });
         created = value;
+    } else if (!created) {
+        LOG_D("Event ignored due to uncreated state");
+        return;
     } else if (event.vKey == enableKey) {
         const auto value = !enabled;
         mediator->Notify(OnEnableToggle { .enabled = value });
         enabled = value;
-    } else if (event.vKey == dumpKey) {
-        mediator->Notify(OnDumpBuffer {});
-    } else if (!created || !enabled) {
+    } else if (!enabled) {
         LOG_D("Event ignored due to disabled state");
         return;
     } else if (event.vKey == nextKey) {
@@ -154,6 +155,11 @@ void ConfigManager::Visitor::operator()(const OnKeyDown& event) const try {
         const auto value = it != fovPresets.rend() ? *it : fovPresets.back();
         mediator->Notify(OnFovChange { .fov = value });
         fov = value;
+    } else if (event.vKey == dumpKey) {
+        mediator->Notify(OnDumpBuffer {});
+    } else {
+        LOG_D("Event ignored due to unknown vKey");
+        return;
     }
 
     LOG_D("OnKeyDown event handled");
