@@ -1,4 +1,4 @@
-![Game Version](https://img.shields.io/badge/version-%205.2-brightgreen)
+![Game Version](https://img.shields.io/badge/version-%205.3-brightgreen)
 ![GitHub all releases](https://img.shields.io/github/downloads/z3lx/genshin-fov-unlock/total)
 
 # Genshin Impact FOV Unlocker
