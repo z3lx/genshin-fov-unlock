@@ -40,7 +40,7 @@ private:
     static void HkSetFieldOfView(void* instance, float value) noexcept;
 
     static std::mutex mutex;
-    static Hook<void, void*, float> hook;
+    static std::unique_ptr<Hook<void, void*, float>> hook;
     static ExponentialFilter<float> filter;
 
     static bool enabled;

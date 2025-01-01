@@ -1,8 +1,12 @@
 #pragma once
 
-namespace detail {
-    class HookShared {
+#include <cstdint>
+
+namespace details {
+    class HookBackend {
     protected:
+        [[nodiscard]] static size_t Count() noexcept;
+
         [[nodiscard]] static bool IsInitialized() noexcept;
         static void Initialize();
         static void Uninitialize();
@@ -18,17 +22,14 @@ namespace detail {
 }
 
 template <typename Ret, typename... Args>
-class Hook : public detail::HookShared {
+class Hook : public details::HookBackend {
 public:
-    Hook() noexcept;
-    ~Hook() noexcept;
-
-    [[nodiscard]] bool IsInitialized() const noexcept;
-    void Initialize() const;
-    void Uninitialize() const;
+    Hook();
+    Hook(void* target, void* detour, bool enable = false);
+    ~Hook();
 
     [[nodiscard]] bool IsCreated() const noexcept;
-    void Create(void* target, void* detour);
+    void Create(void* target, void* detour, bool enable = false);
     void Remove() const;
 
     [[nodiscard]] bool IsEnabled() const noexcept;

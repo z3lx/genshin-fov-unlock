@@ -28,7 +28,7 @@ constexpr auto OFFSET_GL = 0x13F87C0;
 constexpr auto OFFSET_CN = 0x13F38A0;
 
 std::mutex Unlocker::mutex {};
-Hook<void, void*, float> Unlocker::hook {};
+std::unique_ptr<Hook<void, void*, float>> Unlocker::hook = nullptr;
 ExponentialFilter<float> Unlocker::filter {};
 
 bool Unlocker::enabled = false;
@@ -56,8 +56,10 @@ Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
         reinterpret_cast<uintptr_t>(target), reinterpret_cast<uintptr_t>(detour)
     );
 
-    hook.Initialize();
-    hook.Create(target, detour);
+    if (!hook) {
+        hook = std::make_unique<Hook<void, void*, float>>();
+    }
+    hook->Create(target, detour);
 
     LOG_I("Unlocker initialized");
 } catch (const std::exception& e) {
@@ -67,7 +69,7 @@ Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
 Unlocker::~Unlocker() try {
     LOG_D("Uninitializing unlocker");
     std::lock_guard lock(mutex);
-    hook.Uninitialize();
+    hook = nullptr;
     LOG_I("Unlocker uninitialized");
 } catch (const std::exception& e) {
     LOG_E("Failed to uninitialize unlocker: {}", e.what());
@@ -75,15 +77,15 @@ Unlocker::~Unlocker() try {
 }
 
 bool Unlocker::IsCreated() const noexcept {
-    return hook.IsCreated();
+    return hook->IsCreated();
 }
 
 void Unlocker::Create(const bool value) const {
     std::lock_guard lock(mutex);
     if (value) {
-        hook.Enable();
+        hook->Enable();
     } else {
-        hook.Disable();
+        hook->Disable();
     }
 }
 
@@ -106,7 +108,7 @@ void Unlocker::SetSmoothing(const float value) noexcept {
 void Unlocker::HkSetFieldOfView(void* instance, float value) noexcept {
     std::lock_guard lock(mutex);
     try {
-        if (!hook.IsEnabled()) {
+        if (!hook->IsEnabled()) {
             return;
         }
 
@@ -140,7 +142,7 @@ void Unlocker::HkSetFieldOfView(void* instance, float value) noexcept {
         }
 
         AddToBuffer(instance, value);
-        hook.CallOriginal(instance, value);
+        hook->CallOriginal(instance, value);
     } catch (const std::exception& e) {
         LOG_E("Failed to set field of view: {}", e.what());
     }

@@ -24,45 +24,49 @@ void CheckStatus(const MH_STATUS status) {
     ));
 }
 
-bool detail::HookShared::IsInitialized() noexcept {
+size_t details::HookBackend::Count() noexcept {
+    return hooks.size();
+}
+
+bool details::HookBackend::IsInitialized() noexcept {
     return isInitialized;
 }
 
-void detail::HookShared::Initialize() {
+void details::HookBackend::Initialize() {
     CheckStatus(MH_Initialize());
     isInitialized = true;
 }
 
-void detail::HookShared::Uninitialize() {
+void details::HookBackend::Uninitialize() {
     CheckStatus(MH_Uninitialize());
     isInitialized = false;
     hooks.clear();
 }
 
-bool detail::HookShared::IsCreated(void* target) noexcept {
+bool details::HookBackend::IsCreated(void* target) noexcept {
     return hooks.contains(target) && hooks[target].isCreated;
 }
 
-void detail::HookShared::Create(void* target, void* detour, void** original) {
+void details::HookBackend::Create(void* target, void* detour, void** original) {
     CheckStatus(MH_CreateHook(target, detour, original));
     hooks[target].isCreated = true;
 }
 
-void detail::HookShared::Remove(void* target) {
+void details::HookBackend::Remove(void* target) {
     CheckStatus(MH_RemoveHook(target));
     hooks.erase(target);
 }
 
-bool detail::HookShared::IsEnabled(void* target) noexcept {
+bool details::HookBackend::IsEnabled(void* target) noexcept {
     return hooks.contains(target) && hooks[target].isEnabled;
 }
 
-void detail::HookShared::Enable(void* target) {
+void details::HookBackend::Enable(void* target) {
     CheckStatus(MH_EnableHook(target));
     hooks[target].isEnabled = true;
 }
 
-void detail::HookShared::Disable(void* target) {
+void details::HookBackend::Disable(void* target) {
     CheckStatus(MH_DisableHook(target));
     hooks[target].isEnabled = false;
 }
