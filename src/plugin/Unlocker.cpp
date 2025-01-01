@@ -24,8 +24,8 @@
 
 #include <Windows.h>
 
-constexpr auto OFFSET_GL = 0x13F87C0;
-constexpr auto OFFSET_CN = 0x13F38A0;
+constexpr auto OFFSET_GL = 0xF08370;
+constexpr auto OFFSET_CN = 0xF0A370;
 
 Unlocker* Unlocker::unlocker = nullptr;
 std::mutex Unlocker::mutex {};
