@@ -49,11 +49,9 @@ add_library(
     src/utils/log/LoggerInl.h
     src/utils/ExponentialFilter.h
     src/utils/ExponentialFilterInl.h
-    src/utils/FileHandler.cpp
-    src/utils/FileHandler.h
-    src/utils/Hook.cpp
-    src/utils/Hook.h
-    src/utils/HookInl.h
+    src/utils/MinHook.cpp
+    src/utils/MinHook.h
+    src/utils/MinHookInl.h
 )
 
 target_include_directories(

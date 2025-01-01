@@ -4,7 +4,7 @@
 #include "plugin/IComponent.h"
 #include "plugin/IMediator.h"
 #include "utils/ExponentialFilter.h"
-#include "utils/Hook.h"
+#include "utils/MinHook.h"
 
 #include <chrono>
 #include <cstdint>
@@ -16,13 +16,15 @@
 
 class Unlocker final : public IComponent<Event> {
 public:
-    explicit Unlocker(const std::weak_ptr<IMediator<Event>>& mediator);
-    ~Unlocker() override;
+    explicit Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) noexcept;
+    ~Unlocker() noexcept override;
 
     [[nodiscard]] bool IsCreated() const noexcept;
-    void Create(bool value) const;
+    void Create(bool value);
+    [[nodiscard]] bool IsHooked() const noexcept;
+    void Hook(bool value) const;
     [[nodiscard]] bool IsEnabled() const noexcept;
-    void Enable(bool value) noexcept;
+    void Enable(bool value) const;
 
     void SetFieldOfView(int value) noexcept;
     void SetSmoothing(float value) noexcept;
@@ -39,11 +41,12 @@ private:
 
     static void HkSetFieldOfView(void* instance, float value) noexcept;
 
+    static Unlocker* unlocker;
     static std::mutex mutex;
-    static std::unique_ptr<Hook<void, void*, float>> hook;
+    static std::unique_ptr<MinHook<void, void*, float>> hook;
     static ExponentialFilter<float> filter;
 
-    static bool enabled;
+    static bool isEnabled;
     static int overrideFov;
 
     static int setFovCount;

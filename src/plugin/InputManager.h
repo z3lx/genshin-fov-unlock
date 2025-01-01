@@ -15,8 +15,11 @@ public:
     explicit InputManager(
         const std::weak_ptr<IMediator<Event>>& mediator,
         const std::vector<HWND>& targetWindows = {}
-    );
-    ~InputManager() override;
+    ) noexcept;
+    ~InputManager() noexcept override;
+
+    [[nodiscard]] bool IsHooked() const noexcept;
+    void Hook(bool value);
 
     void Handle(const Event& event) override;
 

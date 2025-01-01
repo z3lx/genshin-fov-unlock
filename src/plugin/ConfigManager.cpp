@@ -2,24 +2,22 @@
 #include "plugin/Events.h"
 #include "plugin/IComponent.h"
 #include "plugin/IMediator.h"
-#include "utils/FileHandler.h"
 #include "utils/log/Logger.h"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <exception>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <ranges>
-#include <utility>
-
-constexpr auto CONFIG_FILENAME = "fov_config.json";
 
 constexpr auto ENABLED = "enabled";
 constexpr auto FOV = "fov";
 constexpr auto FOV_PRESETS = "fov_presets";
 constexpr auto SMOOTHING = "smoothing";
-constexpr auto CREATE_KEY = "create_key";
+constexpr auto HOOK_KEY = "hook_key";
 constexpr auto ENABLE_KEY = "enable_key";
 constexpr auto NEXT_KEY = "next_key";
 constexpr auto PREV_KEY = "prev_key";
@@ -27,36 +25,36 @@ constexpr auto DUMP_KEY = "dump_key";
 
 ConfigManager::ConfigManager(
     const std::weak_ptr<IMediator<Event>>& mediator,
-    std::unique_ptr<FileHandler>& fileHandler) noexcept
-    : IComponent(mediator), fileHandler(std::move(fileHandler)) {
-    LOG_I("ConfigManager initialized");
+    const std::filesystem::path& filePath) noexcept
+    : IComponent(mediator), filePath(filePath) {
 }
 
-ConfigManager::~ConfigManager() noexcept {
-    LOG_I("ConfigManager uninitialized");
-}
+ConfigManager::~ConfigManager() noexcept = default;
 
 void ConfigManager::Load() try {
-    LOG_D("Loading config from {}", CONFIG_FILENAME);
+    LOG_D("Loading config from {}", filePath.string());
     const auto mediator = weakMediator.lock();
     if (!mediator) {
         LOG_E("Mediator is expired");
         return;
     }
 
-    auto& [created, enabled, fov, fovPresets, smoothing,
-        createKey, enableKey, nextKey, prevKey, dumpKey] = config;
+    auto& [hooked, enabled, fov, fovPresets, smoothing,
+        hookedKey, enableKey, nextKey, prevKey, dumpKey] = config;
 
     try {
-        fileHandler->Open(CONFIG_FILENAME, false);
-        const auto j = nlohmann::ordered_json::parse(fileHandler->Read());
-        fileHandler->Close();
+        std::ifstream file { filePath };
+        if (!file.is_open()) {
+            throw std::runtime_error("Failed to open file");
+        }
+        nlohmann::ordered_json j;
+        file >> j;
 
         j.at(ENABLED).get_to(enabled);
         j.at(FOV).get_to(fov);
         j.at(FOV_PRESETS).get_to(fovPresets);
         j.at(SMOOTHING).get_to(smoothing);
-        j.at(CREATE_KEY).get_to(createKey);
+        j.at(HOOK_KEY).get_to(hookedKey);
         j.at(ENABLE_KEY).get_to(enableKey);
         j.at(NEXT_KEY).get_to(nextKey);
         j.at(PREV_KEY).get_to(prevKey);
@@ -69,7 +67,7 @@ void ConfigManager::Load() try {
 
     // TODO: VALIDATIONS
 
-    mediator->Notify(OnCreateToggle { created });
+    mediator->Notify(OnHookToggle { hooked });
     mediator->Notify(OnEnableToggle { enabled });
     mediator->Notify(OnFovChange { fov });
     mediator->Notify(OnSmoothingChange { smoothing });
@@ -80,26 +78,28 @@ void ConfigManager::Load() try {
 }
 
 void ConfigManager::Save() try {
-    LOG_D("Saving config to {}", CONFIG_FILENAME);
+    LOG_D("Saving config to {}", filePath.string());
 
-    auto& [created, enabled, fov, fovPresets, smoothing,
-        createKey, enableKey, nextKey, prevKey, dumpKey] = config;
+    auto& [hooked, enabled, fov, fovPresets, smoothing,
+        hookKey, enableKey, nextKey, prevKey, dumpKey] = config;
 
     const nlohmann::ordered_json j {
         { ENABLED, enabled },
         { FOV, fov },
         { FOV_PRESETS, fovPresets },
         { SMOOTHING, smoothing },
-        { CREATE_KEY, createKey },
+        { HOOK_KEY, hookKey },
         { ENABLE_KEY, enableKey },
         { NEXT_KEY, nextKey },
         { PREV_KEY, prevKey },
         { DUMP_KEY, dumpKey }
     };
 
-    fileHandler->Open(CONFIG_FILENAME, true);
-    fileHandler->Write(j.dump(4));
-    fileHandler->Close();
+    std::ofstream file { filePath };
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file");
+    }
+    file << j.dump(4);
     LOG_I("Config saved");
 } catch (const std::exception& e) {
     LOG_E("Failed to save config: {}", e.what());
@@ -114,6 +114,26 @@ template <typename T>
 void ConfigManager::Visitor::operator()(const T& event) const { }
 
 template <>
+void ConfigManager::Visitor::operator()(const OnPluginInitialize& event) const try {
+    LOG_D("Handling OnPluginInitialize event");
+    m.Load();
+    LOG_D("OnPluginInitialize event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnPluginInitialize event: {}", e.what());
+    throw;
+}
+
+template <>
+void ConfigManager::Visitor::operator()(const OnPluginUninitialize& event) const try {
+    LOG_D("Handling OnPluginUninitialize event");
+    m.Save();
+    LOG_D("OnPluginUninitialize event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnPluginUninitialize event: {}", e.what());
+    throw;
+}
+
+template <>
 void ConfigManager::Visitor::operator()(const OnKeyDown& event) const try {
     LOG_D("Handling OnKeyDown event with vKey = {}", event.vKey);
     const auto mediator = m.weakMediator.lock();
@@ -122,15 +142,15 @@ void ConfigManager::Visitor::operator()(const OnKeyDown& event) const try {
         return;
     }
 
-    auto& [created, enabled, fov, fovPresets, smoothing,
-        createKey, enableKey, nextKey, prevKey, dumpKey] = m.config;
+    auto& [hooked, enabled, fov, fovPresets, smoothing,
+        hookKey, enableKey, nextKey, prevKey, dumpKey] = m.config;
 
-    if (event.vKey == createKey) {
-        const auto value = !created;
-        mediator->Notify(OnCreateToggle { .created = value });
-        created = value;
-    } else if (!created) {
-        LOG_D("Event ignored due to uncreated state");
+    if (event.vKey == hookKey) {
+        const auto value = !hooked;
+        mediator->Notify(OnHookToggle { .hooked = value });
+        hooked = value;
+    } else if (!hooked) {
+        LOG_D("Event ignored due to unhooked state");
         return;
     } else if (event.vKey == enableKey) {
         const auto value = !enabled;

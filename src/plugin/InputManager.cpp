@@ -21,10 +21,29 @@ std::vector<InputManager*> InputManager::instances {};
 
 InputManager::InputManager(
     const std::weak_ptr<IMediator<Event>>& mediator,
-    const std::vector<HWND>& targetWindows) try
-    : IComponent(mediator), targetWindows(targetWindows) {
-    LOG_D("Initializing InputManager");
+    const std::vector<HWND>& targetWindows) noexcept
+    : IComponent(mediator), targetWindows(targetWindows) { }
+
+InputManager::~InputManager() noexcept = default;
+
+bool InputManager::IsHooked() const noexcept {
+    return hHook && std::ranges::find(instances, this) != instances.end();
+}
+
+void InputManager::Hook(const bool value) {
     std::lock_guard lock { mutex };
+
+    if (!value) {
+        std::erase(instances, this);
+        if (instances.empty()) {
+            RemoveHook(hHook);
+        }
+        return;
+    }
+
+    if (std::ranges::find(instances, this) != instances.end()) {
+        return;
+    }
 
     std::promise<void> promise {};
     std::future<void> future = promise.get_future();
@@ -42,23 +61,6 @@ InputManager::InputManager(
     future.get();
 
     instances.push_back(this);
-    LOG_I("InputManager initialized");
-} catch (const std::exception& e) {
-    LOG_E("Failed to initialize InputManager: {}", e.what());
-    throw;
-}
-
-InputManager::~InputManager() try {
-    LOG_D("Uninitializing InputManager");
-    std::lock_guard lock { mutex };
-    std::erase(instances, this);
-    if (instances.empty()) {
-        RemoveHook(hHook);
-    }
-    LOG_I("InputManager uninitialized");
-} catch (const std::exception& e) {
-    LOG_E("Failed to uninitialize InputManager: {}", e.what());
-    throw;
 }
 
 HHOOK InputManager::SetHook() {
@@ -128,3 +130,21 @@ void InputManager::Handle(const Event& event) {
 
 template <typename T>
 void InputManager::Visitor::operator()(const T& event) const { }
+
+template <>
+void InputManager::Visitor::operator()(const OnPluginInitialize& event) const try {
+    LOG_D("Handling OnPluginInitialize event");
+    m.Hook(true);
+    LOG_D("OnPluginInitialize event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnPluginInitialize event: {}", e.what());
+}
+
+template <>
+void InputManager::Visitor::operator()(const OnPluginUninitialize& event) const try {
+    LOG_D("Handling OnPluginUninitialize event");
+    m.Hook(false);
+    LOG_D("OnPluginUninitialize event handled");
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnPluginUninitialize event: {}", e.what());
+}

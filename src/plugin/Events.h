@@ -1,10 +1,15 @@
 #pragma once
 
 #include <variant>
-#include <vector>
 
-struct OnCreateToggle {
-    const bool created;
+struct OnPluginInitialize {
+};
+
+struct OnPluginUninitialize {
+};
+
+struct OnHookToggle {
+    const bool hooked;
 };
 
 struct OnEnableToggle {
@@ -31,6 +36,13 @@ struct OnKeyUp {
 };
 
 using Event = std::variant<
-    OnCreateToggle, OnEnableToggle, OnFovChange, OnSmoothingChange, OnDumpBuffer,
-    OnKeyDown, OnKeyUp
+    OnPluginInitialize,
+    OnPluginUninitialize,
+    OnHookToggle,
+    OnEnableToggle,
+    OnFovChange,
+    OnSmoothingChange,
+    OnDumpBuffer,
+    OnKeyDown,
+    OnKeyUp
 >;

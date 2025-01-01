@@ -2,7 +2,6 @@
 #include "plugin/ConfigManager.h"
 #include "plugin/InputManager.h"
 #include "plugin/Unlocker.h"
-#include "utils/FileHandler.h"
 #include "utils/log/Logger.h"
 #include "utils/log/sinks/FileSink.h"
 
@@ -32,18 +31,19 @@ void Plugin::Initialize() try {
         std::make_unique<FileSink>(GetPath() / "logs.txt", true)
     );
 
-    auto unlocker = std::make_unique<Unlocker>(plugin);
-    plugin->components.push_back(std::move(unlocker));
+    plugin->components.push_back(
+        std::make_unique<Unlocker>(plugin)
+    );
 
-    auto input = std::make_unique<InputManager>(plugin, GetWindows());
-    plugin->components.push_back(std::move(input));
+    plugin->components.push_back(
+        std::make_unique<InputManager>(plugin, GetWindows())
+    );
 
-    auto fileHandler = std::make_unique<FileHandler>();
-    fileHandler->SetWorkingDirectory(GetPath());
-    auto config = std::make_unique<ConfigManager>(plugin, fileHandler);
-    config->Load();
-    plugin->components.push_back(std::move(config));
+    plugin->components.push_back(
+        std::make_unique<ConfigManager>(plugin, GetPath() / "fov_config.json")
+    );
 
+    plugin->Notify(OnPluginInitialize {});
     LOG_I("Plugin initialized");
 } catch (const std::exception& e) {
     LOG_F("Failed to initialize plugin: {}", e.what());
@@ -52,7 +52,10 @@ void Plugin::Initialize() try {
 
 void Plugin::Uninitialize() try {
     LOG_D("Uninitializing plugin");
-    plugin = nullptr;
+    if (plugin) {
+        plugin->Notify(OnPluginUninitialize {});
+        plugin = nullptr;
+    }
     LOG_I("Plugin uninitialized");
 } catch (const std::exception& e) {
     LOG_F("Failed to uninitialize plugin: {}", e.what());

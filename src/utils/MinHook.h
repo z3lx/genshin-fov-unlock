@@ -22,11 +22,11 @@ namespace details {
 }
 
 template <typename Ret, typename... Args>
-class Hook : public details::HookBackend {
+class MinHook : public details::HookBackend {
 public:
-    Hook();
-    Hook(void* target, void* detour, bool enable = false);
-    ~Hook();
+    MinHook();
+    MinHook(void* target, void* detour, bool enable = false);
+    ~MinHook();
 
     [[nodiscard]] bool IsCreated() const noexcept;
     void Create(void* target, void* detour, bool enable = false);
@@ -45,4 +45,4 @@ private:
     void* original;
 };
 
-#include "utils/HookInl.h"
+#include "utils/MinHookInl.h"

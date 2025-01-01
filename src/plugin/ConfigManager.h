@@ -3,8 +3,8 @@
 #include "plugin/Events.h"
 #include "plugin/IComponent.h"
 #include "plugin/IMediator.h"
-#include "utils/FileHandler.h"
 
+#include <filesystem>
 #include <memory>
 #include <vector>
 
@@ -14,7 +14,8 @@ class ConfigManager final : public IComponent<Event> {
 public:
     explicit ConfigManager(
         const std::weak_ptr<IMediator<Event>>& mediator,
-        std::unique_ptr<FileHandler>& fileHandler) noexcept;
+        const std::filesystem::path& filePath = "fov_config.json"
+    ) noexcept;
     ~ConfigManager() noexcept override;
 
     void Load();
@@ -31,13 +32,13 @@ private:
     };
 
     struct Config {
-        bool created = false;
+        bool hooked = false;
         bool enabled = true;
         int fov = 75;
         std::vector<int> fovPresets = { 30, 45, 60, 75, 90, 110 };
         double smoothing = 0.2;
 
-        int createKey = VK_UP;
+        int hookKey = VK_UP;
         int enableKey = VK_DOWN;
         int nextKey = VK_RIGHT;
         int prevKey = VK_LEFT;
@@ -45,5 +46,5 @@ private:
     };
 
     Config config;
-    std::unique_ptr<FileHandler> fileHandler;
+    std::filesystem::path filePath;
 };
