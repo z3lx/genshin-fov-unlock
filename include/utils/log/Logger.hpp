@@ -1,8 +1,8 @@
 #pragma once
 
-#include "utils/log/Common.h"
-#include "utils/log/formatters/IFormatter.h"
-#include "utils/log/sinks/ISink.h"
+#include "utils/log/Common.hpp"
+#include "utils/log/formatters/IFormatter.hpp"
+#include "utils/log/sinks/ISink.hpp"
 
 #include <chrono>
 #include <memory>
@@ -94,4 +94,4 @@ private:
 #endif
 };
 
-#include "utils/log/LoggerInl.h"
+#include "utils/log/LoggerInl.hpp"

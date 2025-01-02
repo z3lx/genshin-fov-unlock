@@ -1,4 +1,4 @@
-#include "plugin/Plugin.h"
+#include "plugin/Plugin.hpp"
 
 #include <thread>
 

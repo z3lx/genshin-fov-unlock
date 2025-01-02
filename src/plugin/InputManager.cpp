@@ -1,8 +1,8 @@
-#include "plugin/InputManager.h"
-#include "plugin/Events.h"
-#include "plugin/IComponent.h"
-#include "plugin/IMediator.h"
-#include "utils/log/Logger.h"
+#include "plugin/InputManager.hpp"
+#include "plugin/Events.hpp"
+#include "plugin/IComponent.hpp"
+#include "plugin/IMediator.hpp"
+#include "utils/log/Logger.hpp"
 
 #include <algorithm>
 #include <future>

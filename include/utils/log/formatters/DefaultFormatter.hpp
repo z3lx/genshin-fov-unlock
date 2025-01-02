@@ -1,7 +1,7 @@
 #pragma once
 
-#include "utils/log/Common.h"
-#include "utils/log/formatters/IFormatter.h"
+#include "utils/log/Common.hpp"
+#include "utils/log/formatters/IFormatter.hpp"
 
 #include <cstddef>
 #include <sstream>

@@ -1,7 +1,7 @@
-#include "utils/log/formatters/DefaultFormatter.h"
-#include "utils/log/formatters/IFormatter.h"
-#include "utils/log/sinks/ConsoleSink.h"
-#include "utils/log/sinks/ISink.h"
+#include "utils/log/formatters/DefaultFormatter.hpp"
+#include "utils/log/formatters/IFormatter.hpp"
+#include "utils/log/sinks/ConsoleSink.hpp"
+#include "utils/log/sinks/ISink.hpp"
 
 #include <format>
 #include <memory>

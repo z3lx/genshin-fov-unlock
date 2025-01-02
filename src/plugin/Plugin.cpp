@@ -1,9 +1,9 @@
-#include "plugin/Plugin.h"
-#include "plugin/ConfigManager.h"
-#include "plugin/InputManager.h"
-#include "plugin/Unlocker.h"
-#include "utils/log/Logger.h"
-#include "utils/log/sinks/FileSink.h"
+#include "plugin/Plugin.hpp"
+#include "plugin/ConfigManager.hpp"
+#include "plugin/InputManager.hpp"
+#include "plugin/Unlocker.hpp"
+#include "utils/log/Logger.hpp"
+#include "utils/log/sinks/FileSink.hpp"
 
 #include <exception>
 #include <filesystem>

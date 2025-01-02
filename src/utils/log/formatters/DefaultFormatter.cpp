@@ -1,5 +1,5 @@
-#include "utils/log/formatters/DefaultFormatter.h"
-#include "utils/log/Common.h"
+#include "utils/log/formatters/DefaultFormatter.hpp"
+#include "utils/log/Common.hpp"
 
 #include <cstddef>
 #include <format>
