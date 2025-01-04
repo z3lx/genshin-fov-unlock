@@ -16,16 +16,11 @@
 
 class Unlocker final : public IComponent<Event> {
 public:
-    explicit Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) noexcept;
+    explicit Unlocker(const std::weak_ptr<IMediator<Event>>& mediator);
     ~Unlocker() noexcept override;
 
-    [[nodiscard]] bool IsCreated() const noexcept;
-    void Create(bool value);
-    [[nodiscard]] bool IsHooked() const noexcept;
-    void Hook(bool value) const;
-    [[nodiscard]] bool IsEnabled() const noexcept;
-    void Enable(bool value) const;
-
+    void SetHook(bool value) const;
+    void SetEnable(bool value) const;
     void SetFieldOfView(int value) noexcept;
     void SetSmoothing(float value) noexcept;
 
@@ -41,7 +36,6 @@ private:
 
     static void HkSetFieldOfView(void* instance, float value) noexcept;
 
-    static Unlocker* unlocker;
     static std::mutex mutex;
     static std::unique_ptr<MinHook<void, void*, float>> hook;
     static ExponentialFilter<float> filter;

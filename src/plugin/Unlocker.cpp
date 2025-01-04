@@ -20,14 +20,12 @@
 #include <string>
 #include <tuple>
 #include <variant>
-#include <vector>
 
 #include <Windows.h>
 
 constexpr auto OFFSET_GL = 0xF08370;
 constexpr auto OFFSET_CN = 0xF0A370;
 
-Unlocker* Unlocker::unlocker = nullptr;
 std::mutex Unlocker::mutex {};
 std::unique_ptr<MinHook<void, void*, float>> Unlocker::hook = nullptr;
 ExponentialFilter<float> Unlocker::filter {};
@@ -40,25 +38,9 @@ void* Unlocker::previousInstance = nullptr;
 float Unlocker::previousFov = 0.0f;
 bool Unlocker::isPreviousFov = false;
 
-Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) noexcept
-    : IComponent(mediator) { }
-
-Unlocker::~Unlocker() noexcept = default;
-
-bool Unlocker::IsCreated() const noexcept {
-    return hook && hook->IsCreated();
-}
-
-void Unlocker::Create(const bool value) {
-    std::lock_guard lock(mutex);
-
-    if (!value) {
-        if (unlocker == this) {
-            hook = nullptr;
-            unlocker = nullptr;
-        }
-        return;
-    }
+Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator)
+    : IComponent(mediator) {
+    std::lock_guard lock { mutex };
 
     // TODO: Refactor GetModuleHandle redundancy
     const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
@@ -67,27 +49,20 @@ void Unlocker::Create(const bool value) {
     const auto target = reinterpret_cast<void*>(module + offset);
     const auto detour = reinterpret_cast<void*>(HkSetFieldOfView);
 
-    LOG_D(
-        "Creating hook with target = 0x{:X}, detour = 0x{:X}",
-        reinterpret_cast<uintptr_t>(target), reinterpret_cast<uintptr_t>(detour)
-    );
-
     if (!hook) {
         hook = std::make_unique<MinHook<void, void*, float>>();
     }
     hook->Create(target, detour);
-    unlocker = this;
 }
 
-bool Unlocker::IsHooked() const noexcept {
-    return IsCreated() && hook->IsEnabled();
+Unlocker::~Unlocker() noexcept {
+    std::lock_guard lock { mutex };
+    hook->Remove();
+    hook = nullptr;
 }
 
-void Unlocker::Hook(const bool value) const {
-    std::lock_guard lock(mutex);
-    if (!IsCreated()) {
-        throw std::runtime_error("Hook must be created");
-    }
+void Unlocker::SetHook(const bool value) const {
+    std::lock_guard lock { mutex };
     if (value) {
         hook->Enable();
     } else {
@@ -95,11 +70,7 @@ void Unlocker::Hook(const bool value) const {
     }
 }
 
-bool Unlocker::IsEnabled() const noexcept {
-    return IsHooked() && isEnabled;
-}
-
-void Unlocker::Enable(const bool value) const {
+void Unlocker::SetEnable(const bool value) const {
     isEnabled = value;
 }
 
@@ -112,9 +83,9 @@ void Unlocker::SetSmoothing(const float value) noexcept {
 }
 
 void Unlocker::HkSetFieldOfView(void* instance, float value) noexcept {
-    std::lock_guard lock(mutex);
+    std::lock_guard lock { mutex };
     try {
-        if (!hook || !hook->IsEnabled()) {
+        if (!hook->IsEnabled()) {
             return;
         }
 
@@ -162,29 +133,9 @@ template <typename T>
 void Unlocker::Visitor::operator()(const T& event) const { }
 
 template <>
-void Unlocker::Visitor::operator()(const OnPluginInitialize& event) const try {
-    LOG_D("Handling OnPluginInitialize event");
-    m.Create(true);
-    LOG_D("OnPluginInitialize event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnPluginInitialize event: {}", e.what());
-    throw;
-}
-
-template <>
-void Unlocker::Visitor::operator()(const OnPluginUninitialize& event) const try {
-    LOG_D("Handling OnPluginUninitialize event");
-    m.Create(false);
-    LOG_D("OnPluginUninitialize event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnPluginUninitialize event: {}", e.what());
-    throw;
-}
-
-template <>
 void Unlocker::Visitor::operator()(const OnHookToggle& event) const try {
     LOG_D("Handling OnHookToggle event with hooked = {}", event.hooked);
-    m.Hook(event.hooked);
+    m.SetHook(event.hooked);
     LOG_D("OnHookToggle event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnHookToggle event: {}", e.what());
@@ -194,7 +145,7 @@ void Unlocker::Visitor::operator()(const OnHookToggle& event) const try {
 template <>
 void Unlocker::Visitor::operator()(const OnEnableToggle& event) const try {
     LOG_D("Handling OnEnableToggle event with enabled = {}", event.enabled);
-    m.Enable(event.enabled);
+    m.SetEnable(event.enabled);
     LOG_D("OnEnableToggle event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnEnableToggle event: {}", e.what());
@@ -253,7 +204,7 @@ void Unlocker::AddToBuffer(void* instance, const float value) {
 std::string Unlocker::DumpBuffer() {
     using namespace nlohmann;
 
-    std::lock_guard lock(mutex);
+    std::lock_guard lock { mutex };
     if (buffer.empty()) {
         return "[]";
     }
