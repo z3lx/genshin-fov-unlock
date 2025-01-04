@@ -42,9 +42,12 @@ Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator)
     : IComponent(mediator) {
     std::lock_guard lock { mutex };
 
-    // TODO: Refactor GetModuleHandle redundancy
-    const auto module = reinterpret_cast<uintptr_t>(GetModuleHandle(nullptr));
-    const auto global = GetModuleHandle("GenshinImpact.exe") != nullptr;
+    auto module = reinterpret_cast<uintptr_t>(GetModuleHandle("GenshinImpact.exe"));
+    const auto global = module ? true :
+        (module = reinterpret_cast<uintptr_t>(GetModuleHandle("YuanShen.exe")), false);
+    if (!module) {
+        throw std::runtime_error("Failed to get module handle due to unknown game");
+    }
     const auto offset = global ? OFFSET_GL : OFFSET_CN;
     const auto target = reinterpret_cast<void*>(module + offset);
     const auto detour = reinterpret_cast<void*>(HkSetFieldOfView);
