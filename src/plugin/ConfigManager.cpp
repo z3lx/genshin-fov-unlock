@@ -113,22 +113,22 @@ template <typename T>
 void ConfigManager::Visitor::operator()(const T& event) const { }
 
 template <>
-void ConfigManager::Visitor::operator()(const OnPluginInitialize& event) const try {
-    LOG_D("Handling OnPluginInitialize event");
+void ConfigManager::Visitor::operator()(const OnPluginStart& event) const try {
+    LOG_D("Handling OnPluginStart event");
     m.Load();
-    LOG_D("OnPluginInitialize event handled");
+    LOG_D("OnPluginStart event handled");
 } catch (const std::exception& e) {
-    LOG_E("Failed to handle OnPluginInitialize event: {}", e.what());
+    LOG_E("Failed to handle OnPluginStart event: {}", e.what());
     throw;
 }
 
 template <>
-void ConfigManager::Visitor::operator()(const OnPluginUninitialize& event) const try {
-    LOG_D("Handling OnPluginUninitialize event");
+void ConfigManager::Visitor::operator()(const OnPluginEnd& event) const try {
+    LOG_D("Handling OnPluginEnd event");
     m.Save();
-    LOG_D("OnPluginUninitialize event handled");
+    LOG_D("OnPluginEnd event handled");
 } catch (const std::exception& e) {
-    LOG_E("Failed to handle OnPluginUninitialize event: {}", e.what());
+    LOG_E("Failed to handle OnPluginEnd event: {}", e.what());
     throw;
 }
 

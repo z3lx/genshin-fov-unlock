@@ -43,7 +43,7 @@ void Plugin::Initialize() try {
         std::make_unique<ConfigManager>(plugin, GetPath() / "fov_config.json")
     );
 
-    plugin->Notify(OnPluginInitialize {});
+    plugin->Notify(OnPluginStart {});
     LOG_I("Plugin initialized");
 } catch (const std::exception& e) {
     LOG_F("Failed to initialize plugin: {}", e.what());
@@ -53,7 +53,7 @@ void Plugin::Initialize() try {
 void Plugin::Uninitialize() try {
     LOG_D("Uninitializing plugin");
     if (plugin) {
-        plugin->Notify(OnPluginUninitialize {});
+        plugin->Notify(OnPluginEnd {});
         plugin = nullptr;
     }
     LOG_I("Plugin uninitialized");
