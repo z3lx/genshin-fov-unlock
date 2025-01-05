@@ -38,7 +38,7 @@ InputManager::~InputManager() noexcept {
     }
 }
 
-void InputManager::SetEnable(const bool value) {
+void InputManager::SetEnable(const bool value) noexcept {
     isEnabled = value;
 }
 

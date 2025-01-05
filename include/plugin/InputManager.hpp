@@ -18,7 +18,7 @@ public:
     ) noexcept;
     ~InputManager() noexcept override;
 
-    void SetEnable(bool value);
+    void SetEnable(bool value) noexcept;
 
     void Handle(const Event& event) override;
 
