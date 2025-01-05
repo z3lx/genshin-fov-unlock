@@ -22,28 +22,19 @@ void Plugin::Initialize() try {
         return;
     }
 
+    LOG_SET_LEVEL(Level::Trace);
+    LOG_SET_SINKS(std::make_unique<FileSink>(GetPath() / "logs.txt", true));
     LOG_D("Initializing plugin");
     LOG_D("Working directory: {}", GetPath().string());
+
     plugin = std::shared_ptr<Plugin>(new Plugin());
-
-    LOG_SET_LEVEL(Level::Trace);
-    LOG_SET_SINKS(
-        std::make_unique<FileSink>(GetPath() / "logs.txt", true)
-    );
-
-    plugin->components.push_back(
+    plugin->AddComponents(
+        std::make_unique<InputManager>(plugin, GetWindows()),
+        std::make_unique<ConfigManager>(plugin, GetPath() / "fov_config.json"),
         std::make_unique<Unlocker>(plugin)
     );
-
-    plugin->components.push_back(
-        std::make_unique<InputManager>(plugin, GetWindows())
-    );
-
-    plugin->components.push_back(
-        std::make_unique<ConfigManager>(plugin, GetPath() / "fov_config.json")
-    );
-
     plugin->Notify(OnPluginStart {});
+
     LOG_I("Plugin initialized");
 } catch (const std::exception& e) {
     LOG_F("Failed to initialize plugin: {}", e.what());
