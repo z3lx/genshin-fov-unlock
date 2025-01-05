@@ -18,8 +18,7 @@ public:
     ) noexcept;
     ~InputManager() noexcept override;
 
-    [[nodiscard]] bool IsHooked() const noexcept;
-    void Hook(bool value);
+    void SetEnable(bool value);
 
     void Handle(const Event& event) override;
 
@@ -32,8 +31,7 @@ private:
     };
 
     static HHOOK SetHook();
-    static void RemoveHook(HHOOK& handle) noexcept;
-    static void ProcessMessages() noexcept;
+    static void RemoveHook(HHOOK& handle);
 
     static LRESULT CALLBACK KeyboardProc(
         int nCode, WPARAM wParam, LPARAM lParam
@@ -44,5 +42,6 @@ private:
     static std::mutex mutex;
     static std::vector<InputManager*> instances;
 
+    bool isEnabled;
     std::vector<HWND> targetWindows;
 };

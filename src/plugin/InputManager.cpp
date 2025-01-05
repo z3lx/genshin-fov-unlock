@@ -22,70 +22,57 @@ std::vector<InputManager*> InputManager::instances {};
 InputManager::InputManager(
     const std::weak_ptr<IMediator<Event>>& mediator,
     const std::vector<HWND>& targetWindows) noexcept
-    : IComponent(mediator), targetWindows(targetWindows) { }
-
-InputManager::~InputManager() noexcept = default;
-
-bool InputManager::IsHooked() const noexcept {
-    return hHook && std::ranges::find(instances, this) != instances.end();
-}
-
-void InputManager::Hook(const bool value) {
+    : IComponent(mediator), isEnabled(false), targetWindows(targetWindows) {
     std::lock_guard lock { mutex };
-
-    if (!value) {
-        std::erase(instances, this);
-        if (instances.empty()) {
-            RemoveHook(hHook);
-        }
-        return;
+    if (!hHook) {
+        hHook = SetHook();
     }
-
-    if (std::ranges::find(instances, this) != instances.end()) {
-        return;
-    }
-
-    std::promise<void> promise {};
-    std::future<void> future = promise.get_future();
-    std::thread {[&promise, this]() {
-        if (hHook) {
-            return;
-        }
-        try { hHook = SetHook(); } catch (...) {
-            promise.set_exception(std::current_exception());
-            return;
-        }
-        promise.set_value();
-        ProcessMessages();
-    }}.detach();
-    future.get();
-
     instances.push_back(this);
 }
 
-HHOOK InputManager::SetHook() {
-    HHOOK handle = SetWindowsHookEx(
-        WH_KEYBOARD_LL, KeyboardProc, nullptr, 0
-    );
-    if (!handle) {
-        throw std::runtime_error {
-            std::to_string(GetLastError())
-        };
+InputManager::~InputManager() noexcept {
+    std::lock_guard lock { mutex };
+    std::erase(instances, this);
+    if (instances.empty()) {
+        RemoveHook(hHook);
     }
+}
+
+void InputManager::SetEnable(const bool value) {
+    isEnabled = value;
+}
+
+HHOOK InputManager::SetHook() {
+    HHOOK handle = nullptr;
+    std::promise<void> promise {};
+    std::future<void> future = promise.get_future();
+    std::thread {[&handle, &promise]() {
+        handle = SetWindowsHookEx(
+            WH_KEYBOARD_LL, KeyboardProc, nullptr, 0
+        );
+        if (!handle) {
+            promise.set_exception(std::make_exception_ptr(
+                std::runtime_error { std::to_string(GetLastError()) }
+            ));
+            return;
+        }
+        promise.set_value();
+
+        MSG msg;
+        while (GetMessage(&msg, nullptr, 0, 0)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }}.detach();
+    future.get();
     return handle;
 }
 
-void InputManager::RemoveHook(HHOOK& handle) noexcept {
-    UnhookWindowsHookEx(handle);
-    handle = nullptr;
-}
-
-void InputManager::ProcessMessages() noexcept {
-    MSG msg;
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+void InputManager::RemoveHook(HHOOK& handle) {
+    if (!UnhookWindowsHookEx(handle)) {
+        throw std::runtime_error { std::to_string(GetLastError()) };
     }
+    handle = nullptr;
 }
 
 LRESULT CALLBACK InputManager::KeyboardProc(
@@ -105,6 +92,9 @@ void InputManager::Notify(const Event& event) noexcept try {
     std::lock_guard lock { mutex };
     HWND currentWindow = GetForegroundWindow();
     for (const auto& instance : instances) {
+        if (!instance->isEnabled) {
+            continue;
+        }
         const auto mediator = instance->weakMediator.lock();
         if (!mediator) {
             LOG_E("Mediator is expired");
@@ -134,7 +124,7 @@ void InputManager::Visitor::operator()(const T& event) const { }
 template <>
 void InputManager::Visitor::operator()(const OnPluginInitialize& event) const try {
     LOG_D("Handling OnPluginInitialize event");
-    m.Hook(true);
+    m.SetEnable(true);
     LOG_D("OnPluginInitialize event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnPluginInitialize event: {}", e.what());
@@ -143,7 +133,7 @@ void InputManager::Visitor::operator()(const OnPluginInitialize& event) const tr
 template <>
 void InputManager::Visitor::operator()(const OnPluginUninitialize& event) const try {
     LOG_D("Handling OnPluginUninitialize event");
-    m.Hook(false);
+    m.SetEnable(false);
     LOG_D("OnPluginUninitialize event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnPluginUninitialize event: {}", e.what());
