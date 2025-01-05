@@ -38,7 +38,7 @@ void* Unlocker::previousInstance = nullptr;
 float Unlocker::previousFov = 0.0f;
 bool Unlocker::isPreviousFov = false;
 
-Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator)
+Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
     : IComponent(mediator) {
     std::lock_guard lock { mutex };
 
@@ -56,6 +56,9 @@ Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator)
         hook = std::make_unique<MinHook<void, void*, float>>();
     }
     hook->Create(target, detour);
+} catch (const std::exception& e) {
+    LOG_E("Failed to create Unlocker: {}", e.what());
+    throw;
 }
 
 Unlocker::~Unlocker() noexcept {

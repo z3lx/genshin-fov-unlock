@@ -26,8 +26,7 @@ constexpr auto DUMP_KEY = "dump_key";
 ConfigManager::ConfigManager(
     const std::weak_ptr<IMediator<Event>>& mediator,
     const std::filesystem::path& filePath) noexcept
-    : IComponent(mediator), filePath(filePath) {
-}
+    : IComponent(mediator), filePath(filePath) { }
 
 ConfigManager::~ConfigManager() noexcept = default;
 

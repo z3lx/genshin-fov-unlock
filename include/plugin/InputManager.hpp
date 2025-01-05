@@ -15,7 +15,7 @@ public:
     explicit InputManager(
         const std::weak_ptr<IMediator<Event>>& mediator,
         const std::vector<HWND>& targetWindows = {}
-    ) noexcept;
+    );
     ~InputManager() noexcept override;
 
     void SetEnable(bool value) noexcept;

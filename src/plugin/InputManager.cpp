@@ -21,13 +21,16 @@ std::vector<InputManager*> InputManager::instances {};
 
 InputManager::InputManager(
     const std::weak_ptr<IMediator<Event>>& mediator,
-    const std::vector<HWND>& targetWindows) noexcept
+    const std::vector<HWND>& targetWindows) try
     : IComponent(mediator), isEnabled(false), targetWindows(targetWindows) {
     std::lock_guard lock { mutex };
     if (!hHook) {
         hHook = SetHook();
     }
     instances.push_back(this);
+} catch (const std::exception& e) {
+    LOG_E("Failed to create InputManager: {}", e.what());
+    throw;
 }
 
 InputManager::~InputManager() noexcept {
