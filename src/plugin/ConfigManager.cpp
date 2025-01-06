@@ -30,6 +30,28 @@ ConfigManager::ConfigManager(
 
 ConfigManager::~ConfigManager() noexcept = default;
 
+#define TRY_GET_TO(json, key, value)                                            \
+    try {                                                                       \
+        (json).at(key).get_to(value);                                           \
+    } catch (const std::exception& e) {                                         \
+        LOG_W("Failed to parse key '{}': {}", key, e.what());                   \
+    }
+
+#define TRY_GET_TO_IF(json, key, value, condition)                              \
+    try {                                                                       \
+        auto previousValue = value;                                             \
+        (json).at(key).get_to(value);                                           \
+        if (!(condition)) {                                                     \
+            (value) = previousValue;                                            \
+            LOG_W(                                                              \
+                "Invalid value for key '{}': {} is not satisfied",              \
+                key, #condition                                                 \
+            );                                                                  \
+        }                                                                       \
+    } catch (const std::exception& e) {                                         \
+        LOG_W("Failed to parse key '{}': {}", key, e.what());                   \
+    }
+
 void ConfigManager::Load() try {
     LOG_D("Loading config from {}", filePath.string());
     const auto mediator = weakMediator.lock();
@@ -39,7 +61,7 @@ void ConfigManager::Load() try {
     }
 
     auto& [hooked, enabled, fov, fovPresets, smoothing,
-        hookedKey, enableKey, nextKey, prevKey, dumpKey] = config;
+        hookKey, enableKey, nextKey, prevKey, dumpKey] = config;
 
     try {
         std::ifstream file { filePath };
@@ -49,22 +71,34 @@ void ConfigManager::Load() try {
         nlohmann::ordered_json j;
         file >> j;
 
-        j.at(ENABLED).get_to(enabled);
-        j.at(FOV).get_to(fov);
-        j.at(FOV_PRESETS).get_to(fovPresets);
-        j.at(SMOOTHING).get_to(smoothing);
-        j.at(HOOK_KEY).get_to(hookedKey);
-        j.at(ENABLE_KEY).get_to(enableKey);
-        j.at(NEXT_KEY).get_to(nextKey);
-        j.at(PREV_KEY).get_to(prevKey);
-        j.at(DUMP_KEY).get_to(dumpKey);
+        TRY_GET_TO(j, ENABLED, enabled);
+        TRY_GET_TO_IF(j, FOV, fov,
+            fov > 0 && fov < 180);
+        TRY_GET_TO_IF(j, FOV_PRESETS, fovPresets,
+            std::ranges::all_of(fovPresets, [](const int fovPreset) {
+                return fovPreset > 0 && fovPreset < 180;
+            }));
+        TRY_GET_TO_IF(j, SMOOTHING, smoothing,
+            smoothing >= 0.0 && smoothing <= 1.0);
+        TRY_GET_TO_IF(j, HOOK_KEY, hookKey,
+            hookKey > 0 && hookKey < 255);
+        TRY_GET_TO_IF(j, ENABLE_KEY, enableKey,
+            enableKey > 0 && enableKey < 255);
+        TRY_GET_TO_IF(j, NEXT_KEY, nextKey,
+            nextKey > 0 && nextKey < 255);
+        TRY_GET_TO_IF(j, PREV_KEY, prevKey,
+            prevKey > 0 && prevKey < 255);
+        TRY_GET_TO_IF(j, DUMP_KEY, dumpKey,
+            dumpKey > 0 && dumpKey < 255);
     } catch (const std::exception& e) {
         LOG_E("Failed to parse config: {}", e.what());
         LOG_I("Using default config values");
         config = {};
     }
 
-    // TODO: VALIDATIONS
+    std::ranges::sort(fovPresets);
+    const auto last = std::ranges::unique(fovPresets).begin();
+    fovPresets.erase(last, fovPresets.end());
 
     mediator->Notify(OnHookToggle { hooked });
     mediator->Notify(OnEnableToggle { enabled });
