@@ -2,10 +2,10 @@
 
 #include <variant>
 
-struct OnPluginInitialize {
+struct OnPluginStart {
 };
 
-struct OnPluginUninitialize {
+struct OnPluginEnd {
 };
 
 struct OnHookToggle {
@@ -31,18 +31,23 @@ struct OnKeyDown {
     const int vKey;
 };
 
+struct OnKeyHold {
+    const int vKey;
+};
+
 struct OnKeyUp {
     const int vKey;
 };
 
 using Event = std::variant<
-    OnPluginInitialize,
-    OnPluginUninitialize,
+    OnPluginStart,
+    OnPluginEnd,
     OnHookToggle,
     OnEnableToggle,
     OnFovChange,
     OnSmoothingChange,
     OnDumpBuffer,
     OnKeyDown,
+    OnKeyHold,
     OnKeyUp
 >;

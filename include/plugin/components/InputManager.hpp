@@ -1,11 +1,13 @@
 #pragma once
 
-#include "plugin/Events.h"
-#include "plugin/IComponent.h"
-#include "plugin/IMediator.h"
+#include "plugin/Events.hpp"
+#include "plugin/interfaces/IComponent.hpp"
+#include "plugin/interfaces/IMediator.hpp"
 
 #include <memory>
 #include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <Windows.h>
@@ -15,11 +17,10 @@ public:
     explicit InputManager(
         const std::weak_ptr<IMediator<Event>>& mediator,
         const std::vector<HWND>& targetWindows = {}
-    ) noexcept;
+    );
     ~InputManager() noexcept override;
 
-    [[nodiscard]] bool IsHooked() const noexcept;
-    void Hook(bool value);
+    void SetEnable(bool value) noexcept;
 
     void Handle(const Event& event) override;
 
@@ -32,8 +33,7 @@ private:
     };
 
     static HHOOK SetHook();
-    static void RemoveHook(HHOOK& handle) noexcept;
-    static void ProcessMessages() noexcept;
+    static void RemoveHook(HHOOK& handle);
 
     static LRESULT CALLBACK KeyboardProc(
         int nCode, WPARAM wParam, LPARAM lParam
@@ -42,7 +42,9 @@ private:
 
     static HHOOK hHook;
     static std::mutex mutex;
-    static std::vector<InputManager*> instances;
+    static std::unordered_set<InputManager*> instances;
+    static std::unordered_map<int, bool> keyStates;
 
+    bool isEnabled;
     std::vector<HWND> targetWindows;
 };

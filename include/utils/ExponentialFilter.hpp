@@ -27,4 +27,4 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> lastTime;
 };
 
-#include "utils/ExponentialFilterInl.h"
+#include "utils/ExponentialFilterInl.hpp"

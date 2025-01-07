@@ -1,4 +1,4 @@
-#include "utils/log/sinks/FileSink.h"
+#include "utils/log/sinks/FileSink.hpp"
 
 #include <filesystem>
 #include <ios>

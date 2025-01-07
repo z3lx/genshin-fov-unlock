@@ -45,4 +45,4 @@ private:
     void* original;
 };
 
-#include "utils/MinHookInl.h"
+#include "utils/MinHookInl.hpp"

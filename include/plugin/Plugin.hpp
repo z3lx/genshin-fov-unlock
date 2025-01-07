@@ -1,7 +1,7 @@
 #pragma once
 
-#include "plugin/Events.h"
-#include "plugin/IMediator.h"
+#include "plugin/Events.hpp"
+#include "plugin/interfaces/IMediator.hpp"
 
 #include <filesystem>
 #include <memory>
@@ -9,9 +9,7 @@
 
 #include <Windows.h>
 
-class Plugin final :
-    public IMediator<Event>,
-    std::enable_shared_from_this<Plugin> {
+class Plugin final : public IMediator<Event> {
 public:
     static void Initialize();
     static void Uninitialize();

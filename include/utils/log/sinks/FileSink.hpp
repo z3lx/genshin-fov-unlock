@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utils/log/sinks/ISink.h"
+#include "utils/log/sinks/ISink.hpp"
 
 #include <filesystem>
 #include <fstream>

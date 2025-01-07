@@ -1,9 +1,9 @@
-#include "plugin/Plugin.h"
-#include "plugin/ConfigManager.h"
-#include "plugin/InputManager.h"
-#include "plugin/Unlocker.h"
-#include "utils/log/Logger.h"
-#include "utils/log/sinks/FileSink.h"
+#include "plugin/Plugin.hpp"
+#include "plugin/components/ConfigManager.hpp"
+#include "plugin/components/InputManager.hpp"
+#include "plugin/components/Unlocker.hpp"
+#include "utils/log/Logger.hpp"
+#include "utils/log/sinks/FileSink.hpp"
 
 #include <exception>
 #include <filesystem>
@@ -22,28 +22,19 @@ void Plugin::Initialize() try {
         return;
     }
 
+    LOG_SET_LEVEL(Level::Trace);
+    LOG_SET_SINKS(std::make_unique<FileSink>(GetPath() / "logs.txt", true));
     LOG_D("Initializing plugin");
     LOG_D("Working directory: {}", GetPath().string());
+
     plugin = std::shared_ptr<Plugin>(new Plugin());
-
-    LOG_SET_LEVEL(Level::Trace);
-    LOG_SET_SINKS(
-        std::make_unique<FileSink>(GetPath() / "logs.txt", true)
-    );
-
-    plugin->components.push_back(
+    plugin->AddComponents(
+        std::make_unique<InputManager>(plugin, GetWindows()),
+        std::make_unique<ConfigManager>(plugin, GetPath() / "fov_config.json"),
         std::make_unique<Unlocker>(plugin)
     );
+    plugin->Notify(OnPluginStart {});
 
-    plugin->components.push_back(
-        std::make_unique<InputManager>(plugin, GetWindows())
-    );
-
-    plugin->components.push_back(
-        std::make_unique<ConfigManager>(plugin, GetPath() / "fov_config.json")
-    );
-
-    plugin->Notify(OnPluginInitialize {});
     LOG_I("Plugin initialized");
 } catch (const std::exception& e) {
     LOG_F("Failed to initialize plugin: {}", e.what());
@@ -53,7 +44,7 @@ void Plugin::Initialize() try {
 void Plugin::Uninitialize() try {
     LOG_D("Uninitializing plugin");
     if (plugin) {
-        plugin->Notify(OnPluginUninitialize {});
+        plugin->Notify(OnPluginEnd {});
         plugin = nullptr;
     }
     LOG_I("Plugin uninitialized");
