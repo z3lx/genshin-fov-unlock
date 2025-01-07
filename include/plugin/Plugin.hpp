@@ -1,7 +1,7 @@
 #pragma once
 
 #include "plugin/Events.hpp"
-#include "plugin/IMediator.hpp"
+#include "plugin/interfaces/IMediator.hpp"
 
 #include <filesystem>
 #include <memory>

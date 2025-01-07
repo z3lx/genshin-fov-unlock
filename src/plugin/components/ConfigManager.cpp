@@ -1,7 +1,7 @@
-#include "plugin/ConfigManager.hpp"
+#include "plugin/components/ConfigManager.hpp"
 #include "plugin/Events.hpp"
-#include "plugin/IComponent.hpp"
-#include "plugin/IMediator.hpp"
+#include "plugin/interfaces/IComponent.hpp"
+#include "plugin/interfaces/IMediator.hpp"
 #include "utils/log/Logger.hpp"
 
 #include <nlohmann/json.hpp>

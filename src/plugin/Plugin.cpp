@@ -1,7 +1,7 @@
 #include "plugin/Plugin.hpp"
-#include "plugin/ConfigManager.hpp"
-#include "plugin/InputManager.hpp"
-#include "plugin/Unlocker.hpp"
+#include "plugin/components/ConfigManager.hpp"
+#include "plugin/components/InputManager.hpp"
+#include "plugin/components/Unlocker.hpp"
 #include "utils/log/Logger.hpp"
 #include "utils/log/sinks/FileSink.hpp"
 

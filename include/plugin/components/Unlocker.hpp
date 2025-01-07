@@ -1,8 +1,8 @@
 #pragma once
 
 #include "plugin/Events.hpp"
-#include "plugin/IComponent.hpp"
-#include "plugin/IMediator.hpp"
+#include "plugin/interfaces/IComponent.hpp"
+#include "plugin/interfaces/IMediator.hpp"
 #include "utils/ExponentialFilter.hpp"
 #include "utils/MinHook.hpp"
 

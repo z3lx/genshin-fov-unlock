@@ -1,7 +1,7 @@
-#include "plugin/InputManager.hpp"
+#include "plugin/components/InputManager.hpp"
 #include "plugin/Events.hpp"
-#include "plugin/IComponent.hpp"
-#include "plugin/IMediator.hpp"
+#include "plugin/interfaces/IComponent.hpp"
+#include "plugin/interfaces/IMediator.hpp"
 #include "utils/log/Logger.hpp"
 
 #include <algorithm>
