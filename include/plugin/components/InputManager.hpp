@@ -6,6 +6,8 @@
 
 #include <memory>
 #include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <Windows.h>
@@ -40,7 +42,8 @@ private:
 
     static HHOOK hHook;
     static std::mutex mutex;
-    static std::vector<InputManager*> instances;
+    static std::unordered_set<InputManager*> instances;
+    static std::unordered_map<int, bool> keyStates;
 
     bool isEnabled;
     std::vector<HWND> targetWindows;

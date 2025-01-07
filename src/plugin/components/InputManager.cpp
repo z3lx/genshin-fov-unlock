@@ -10,6 +10,8 @@
 #include <mutex>
 #include <stdexcept>
 #include <thread>
+#include <unordered_map>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -17,27 +19,28 @@
 
 HHOOK InputManager::hHook = nullptr;
 std::mutex InputManager::mutex {};
-std::vector<InputManager*> InputManager::instances {};
+std::unordered_set<InputManager*> InputManager::instances {};
+std::unordered_map<int, bool> InputManager::keyStates {};
 
 InputManager::InputManager(
     const std::weak_ptr<IMediator<Event>>& mediator,
     const std::vector<HWND>& targetWindows) try
     : IComponent(mediator), isEnabled(false), targetWindows(targetWindows) {
     std::lock_guard lock { mutex };
-    instances.push_back(this);
+    instances.emplace(this);
     if (instances.size() == 1) {
         hHook = SetHook();
     }
 } catch (const std::exception& e) {
     LOG_E("Failed to create InputManager: {}", e.what());
-    std::erase(instances, this);
+    instances.erase(this);
     throw;
 }
 
 InputManager::~InputManager() noexcept {
     try {
         std::lock_guard lock { mutex };
-        std::erase(instances, this);
+        instances.erase(this);
         if (instances.empty()) {
             RemoveHook(hHook);
         }
@@ -87,13 +90,28 @@ void InputManager::RemoveHook(HHOOK& handle) {
 
 LRESULT CALLBACK InputManager::KeyboardProc(
     const int nCode, const WPARAM wParam, const LPARAM lParam) noexcept {
-    if (nCode == HC_ACTION) {
+    if (nCode != HC_ACTION) {
+        return CallNextHookEx(hHook, nCode, wParam, lParam);
+    }
+
+    try {
         const auto pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+        const auto vKey = static_cast<int>(pKeyboard->vkCode);
+        Event event {};
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-            Notify(OnKeyDown { static_cast<int>(pKeyboard->vkCode) });
+            if (keyStates[vKey]) {
+                event.emplace<OnKeyHold>(vKey);
+            } else {
+                event.emplace<OnKeyDown>(vKey);
+            }
+            keyStates[vKey] = true;
         } else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
-            Notify(OnKeyUp { static_cast<int>(pKeyboard->vkCode) });
+            event.emplace<OnKeyUp>(vKey);
+            keyStates[vKey] = false;
         }
+        Notify(event);
+    } catch (const std::exception& e) {
+        LOG_E("Failed to process keyboard event: {}", e.what());
     }
     return CallNextHookEx(hHook, nCode, wParam, lParam);
 }

@@ -31,6 +31,10 @@ struct OnKeyDown {
     const int vKey;
 };
 
+struct OnKeyHold {
+    const int vKey;
+};
+
 struct OnKeyUp {
     const int vKey;
 };
@@ -44,5 +48,6 @@ using Event = std::variant<
     OnSmoothingChange,
     OnDumpBuffer,
     OnKeyDown,
+    OnKeyHold,
     OnKeyUp
 >;
