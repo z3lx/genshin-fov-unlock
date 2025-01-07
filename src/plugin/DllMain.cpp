@@ -9,7 +9,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     switch (fdwReason) {
         case DLL_PROCESS_ATTACH: {
-            std::thread([] { Plugin::Initialize(); }).detach();
+            std::thread { Plugin::Initialize }.detach();
             break;
         }
         case DLL_PROCESS_DETACH: {

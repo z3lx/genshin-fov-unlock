@@ -24,20 +24,27 @@ InputManager::InputManager(
     const std::vector<HWND>& targetWindows) try
     : IComponent(mediator), isEnabled(false), targetWindows(targetWindows) {
     std::lock_guard lock { mutex };
-    if (!hHook) {
+    instances.push_back(this);
+    if (instances.size() == 1) {
         hHook = SetHook();
     }
-    instances.push_back(this);
 } catch (const std::exception& e) {
     LOG_E("Failed to create InputManager: {}", e.what());
+    std::erase(instances, this);
     throw;
 }
 
 InputManager::~InputManager() noexcept {
-    std::lock_guard lock { mutex };
-    std::erase(instances, this);
-    if (instances.empty()) {
-        RemoveHook(hHook);
+    try {
+        std::lock_guard lock { mutex };
+        std::erase(instances, this);
+        if (instances.empty()) {
+            RemoveHook(hHook);
+        }
+    } catch (const std::exception& e) {
+        // Hook automatically removed when DLL is unloaded
+        // Ignore exception here
+        // LOG_E("Failed to destroy InputManager: {}", e.what());
     }
 }
 

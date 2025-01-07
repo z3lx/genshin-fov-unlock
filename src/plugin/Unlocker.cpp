@@ -62,9 +62,13 @@ Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
 }
 
 Unlocker::~Unlocker() noexcept {
-    std::lock_guard lock { mutex };
-    hook->Remove();
-    hook = nullptr;
+    try {
+        std::lock_guard lock { mutex };
+        hook->Remove();
+        hook = nullptr;
+    } catch (const std::exception& e) {
+        LOG_E("Failed to destroy Unlocker: {}", e.what());
+    }
 }
 
 void Unlocker::SetHook(const bool value) const {
