@@ -58,6 +58,31 @@ void RequestElevation() {
     std::exit(0);
 }
 
+uint64_t GetFileVersion(const fs::path& filePath) {
+    DWORD versionInfoSize = GetFileVersionInfoSizeW(
+        filePath.c_str(), nullptr
+    );
+
+    std::vector<char> versionInfoBuffer(versionInfoSize, 0);
+    ThrowOnError(GetFileVersionInfoW(
+        filePath.c_str(), 0, versionInfoBuffer.size(), versionInfoBuffer.data()
+    ));
+
+    constexpr auto subBlock = L"\\";
+    PVOID versionQueryBuffer {};
+    UINT versionQueryBufferSize {};
+    ThrowOnError(VerQueryValueW(
+        versionInfoBuffer.data(), subBlock,
+        &versionQueryBuffer, &versionQueryBufferSize
+    ));
+
+    auto& versionInfo = *static_cast<VS_FIXEDFILEINFO*>(versionQueryBuffer);
+    return (
+        static_cast<uint64_t>(versionInfo.dwFileVersionMS) << 32 |
+        static_cast<uint64_t>(versionInfo.dwFileVersionLS)
+    );
+}
+
 template <typename... Args>
 requires (std::convertible_to<Args, fs::path> && ...)
 void InjectDlls(HANDLE processHandle, Args&&... dllPaths) {
