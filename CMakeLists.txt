@@ -38,6 +38,10 @@ add_library(utils STATIC ${UTILS_SOURCES})
 target_include_directories(utils PRIVATE include)
 target_link_libraries(utils PRIVATE minhook)
 
+file(GLOB_RECURSE LOADER_SOURCES include/loader/* src/loader/*)
+add_executable(loader ${LOADER_SOURCES})
+target_include_directories(loader PRIVATE include)
+
 file(GLOB_RECURSE PLUGIN_SOURCES include/plugin/* src/plugin/*)
 add_library(genshin_fov_unlock SHARED ${PLUGIN_SOURCES})
 target_include_directories(genshin_fov_unlock PRIVATE include)
