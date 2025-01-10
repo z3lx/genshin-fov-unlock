@@ -26,6 +26,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(json)
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 
+set(MAJOR_VERSION 1)
+set(MINOR_VERSION 5)
+set(PATCH_VERSION 0)
+
+set(VERSION_RC ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
+configure_file(
+    res/version.rc.in
+    ${VERSION_RC}
+    @ONLY
+)
+
 option(ENABLE_LOGGING "Enable logging" OFF)
 if (ENABLE_LOGGING)
     add_compile_definitions(ACTIVE_LEVEL=LEVEL_TRACE)
@@ -39,11 +50,12 @@ target_include_directories(utils PRIVATE include)
 target_link_libraries(utils PRIVATE minhook)
 
 file(GLOB_RECURSE LOADER_SOURCES include/loader/* src/loader/*)
-add_executable(loader ${LOADER_SOURCES})
+add_executable(loader ${LOADER_SOURCES} ${VERSION_RC})
 target_include_directories(loader PRIVATE include)
+target_link_libraries(loader PRIVATE version.lib)
 
 file(GLOB_RECURSE PLUGIN_SOURCES include/plugin/* src/plugin/*)
-add_library(genshin_fov_unlock SHARED ${PLUGIN_SOURCES})
+add_library(genshin_fov_unlock SHARED ${PLUGIN_SOURCES} ${VERSION_RC})
 target_include_directories(genshin_fov_unlock PRIVATE include)
 target_link_libraries(genshin_fov_unlock PRIVATE
     nlohmann_json::nlohmann_json

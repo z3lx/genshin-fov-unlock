@@ -1,0 +1,52 @@
+#include <Windows.h>
+
+#define VER_FILEVERSION                 @MAJOR_VERSION@,@MINOR_VERSION@,@PATCH_VERSION@,0
+#define VER_PRODUCTVERSION              VER_FILEVERSION
+#define VER_FILEFLAGSMASK               0
+#define VER_FILEFLAGS                   0
+#define VER_FILEOS                      0
+#define VER_FILETYPE                    0
+#define VER_FILESUBTYPE                 0
+
+#define VER_COMPANYNAME_STR             "z3lx"
+#define VER_FILEDESCRIPTION_STR         "z3lx/genshin-fov-unlock"
+#define VER_FILEVERSION_STR             "@MAJOR_VERSION@.@MINOR_VERSION@.@PATCH_VERSION@.0"
+#define VER_INTERNALNAME_STR            ""
+#define VER_LEGALCOPYRIGHT_STR          "Copyright (c) 2024 z3lx"
+#define VER_LEGALTRADEMARKS1_STR        ""
+#define VER_LEGALTRADEMARKS2_STR        ""
+#define VER_ORIGINALFILENAME_STR        ""
+#define VER_PRODUCTNAME_STR             "z3lx/genshin-fov-unlock"
+#define VER_PRODUCTVERSION_STR          VER_FILEVERSION_STR
+
+VS_VERSION_INFO                         VERSIONINFO
+FILEVERSION                             VER_FILEVERSION
+PRODUCTVERSION                          VER_PRODUCTVERSION
+FILEFLAGSMASK                           VER_FILEFLAGSMASK
+FILEFLAGS                               VER_FILEFLAGS
+FILEOS                                  VER_FILEOS
+FILETYPE                                VER_FILETYPE
+FILESUBTYPE                             VER_FILESUBTYPE
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",        VER_COMPANYNAME_STR
+            VALUE "FileDescription",    VER_FILEDESCRIPTION_STR
+            VALUE "FileVersion",        VER_FILEVERSION_STR
+            VALUE "InternalName",       VER_INTERNALNAME_STR
+            VALUE "LegalCopyright",     VER_LEGALCOPYRIGHT_STR
+            VALUE "LegalTrademarks1",   VER_LEGALTRADEMARKS1_STR
+            VALUE "LegalTrademarks2",   VER_LEGALTRADEMARKS2_STR
+            VALUE "OriginalFilename",   VER_ORIGINALFILENAME_STR
+            VALUE "ProductName",        VER_PRODUCTNAME_STR
+            VALUE "ProductVersion",     VER_PRODUCTVERSION_STR
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation",            0x0409, 0x04B0
+    END
+END
