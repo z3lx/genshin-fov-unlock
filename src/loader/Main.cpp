@@ -1,3 +1,5 @@
+#include "utils/SemVer.hpp"
+
 #include <algorithm>
 #include <exception>
 #include <filesystem>
@@ -58,8 +60,8 @@ void RequestElevation() {
     std::exit(0);
 }
 
-uint64_t GetFileVersion(const fs::path& filePath) {
-    DWORD versionInfoSize = GetFileVersionInfoSizeW(
+SemVer GetFileVersion(const fs::path& filePath) {
+    const DWORD versionInfoSize = GetFileVersionInfoSizeW(
         filePath.c_str(), nullptr
     );
 
@@ -76,11 +78,12 @@ uint64_t GetFileVersion(const fs::path& filePath) {
         &versionQueryBuffer, &versionQueryBufferSize
     ));
 
-    auto& versionInfo = *static_cast<VS_FIXEDFILEINFO*>(versionQueryBuffer);
-    return (
-        static_cast<uint64_t>(versionInfo.dwFileVersionMS) << 32 |
-        static_cast<uint64_t>(versionInfo.dwFileVersionLS)
-    );
+    const auto& versionInfo = *static_cast<VS_FIXEDFILEINFO*>(versionQueryBuffer);
+    return {
+        static_cast<int>(HIWORD(versionInfo.dwFileVersionMS)),
+        static_cast<int>(LOWORD(versionInfo.dwFileVersionMS)),
+        static_cast<int>(HIWORD(versionInfo.dwFileVersionLS))
+    };
 }
 
 template <typename... Args>
