@@ -3,6 +3,7 @@
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IMediator.hpp"
 
+#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <vector>
@@ -18,6 +19,6 @@ public:
 private:
     Plugin();
     static std::filesystem::path GetPath();
-    static std::vector<HWND> GetWindows();
+    static std::vector<HWND> GetWindows(std::chrono::milliseconds timeout);
     static std::shared_ptr<Plugin> plugin;
 };

@@ -2,9 +2,11 @@
 #include "plugin/components/ConfigManager.hpp"
 #include "plugin/components/InputManager.hpp"
 #include "plugin/components/Unlocker.hpp"
+#include "utils/Windows.hpp"
 #include "utils/log/Logger.hpp"
 #include "utils/log/sinks/FileSink.hpp"
 
+#include <chrono>
 #include <exception>
 #include <filesystem>
 #include <memory>
@@ -14,6 +16,8 @@
 #include <vector>
 
 #include <Windows.h>
+
+namespace sc = std::chrono;
 
 std::shared_ptr<Plugin> Plugin::plugin = nullptr;
 
@@ -29,7 +33,7 @@ void Plugin::Initialize() try {
 
     plugin = std::shared_ptr<Plugin>(new Plugin());
     plugin->AddComponents(
-        std::make_unique<InputManager>(plugin, GetWindows()),
+        std::make_unique<InputManager>(plugin, GetWindows(sc::seconds(30))),
         std::make_unique<ConfigManager>(plugin, GetPath() / "fov_config.json"),
         std::make_unique<Unlocker>(plugin)
     );
@@ -61,20 +65,23 @@ fs::path Plugin::GetPath() {
     }
 
     HMODULE module {};
-    GetModuleHandleEx(
+    ThrowOnSystemError(GetModuleHandleExA(
         GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
         static_cast<LPCTSTR>(reinterpret_cast<void*>(GetPath)),
         &module
-    );
+    ));
 
-    char buffer[MAX_PATH];
-    GetModuleFileName(module, buffer, MAX_PATH);
+    constexpr auto bufferSize = 1024;
+    wchar_t buffer[bufferSize];
+    ThrowOnSystemError(GetModuleFileNameW(
+        module, buffer, bufferSize
+    ));
     path = fs::path(buffer).parent_path();
     return path;
 }
 
-std::vector<HWND> Plugin::GetWindows() {
+std::vector<HWND> Plugin::GetWindows(const sc::milliseconds timeout) {
     DWORD targetProcessId = GetCurrentProcessId();
     std::vector<HWND> targetWindows {};
     std::tuple params = std::tie(targetProcessId, targetWindows);
@@ -91,9 +98,13 @@ std::vector<HWND> Plugin::GetWindows() {
         return TRUE;
     };
 
+    const auto start = sc::steady_clock::now();
     while (targetWindows.empty()) {
         EnumWindows(callback, reinterpret_cast<LPARAM>(&params));
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (sc::steady_clock::now() - start > timeout) {
+            throw std::runtime_error("Failed to find target windows");
+        }
+        std::this_thread::sleep_for(sc::seconds(1));
     }
     return targetWindows;
 }
