@@ -1,4 +1,4 @@
-#include "utils/SemVer.hpp"
+#include "loader/Version.hpp"
 #include "utils/Windows.hpp"
 
 #include <algorithm>
@@ -50,33 +50,6 @@ void RequestElevation() {
     };
     ThrowOnSystemError(ShellExecuteExW(&info));
     std::exit(0);
-}
-
-SemVer GetFileVersion(const fs::path& filePath) {
-    DWORD versionInfoSize {};
-    ThrowOnSystemError(versionInfoSize = GetFileVersionInfoSizeW(
-        filePath.c_str(), nullptr
-    ));
-
-    std::vector<char> versionInfoBuffer(versionInfoSize, 0);
-    ThrowOnSystemError(GetFileVersionInfoW(
-        filePath.c_str(), 0, versionInfoBuffer.size(), versionInfoBuffer.data()
-    ));
-
-    constexpr auto subBlock = L"\\";
-    PVOID versionQueryBuffer {};
-    UINT versionQueryBufferSize {};
-    ThrowOnSystemError(VerQueryValueW(
-        versionInfoBuffer.data(), subBlock,
-        &versionQueryBuffer, &versionQueryBufferSize
-    ));
-
-    const auto& versionInfo = *static_cast<VS_FIXEDFILEINFO*>(versionQueryBuffer);
-    return {
-        static_cast<int>(HIWORD(versionInfo.dwFileVersionMS)),
-        static_cast<int>(LOWORD(versionInfo.dwFileVersionMS)),
-        static_cast<int>(HIWORD(versionInfo.dwFileVersionLS))
-    };
 }
 
 template <typename... Args>
