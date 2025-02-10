@@ -24,49 +24,49 @@ void CheckStatus(const MH_STATUS status) {
     ));
 }
 
-size_t details::HookBackend::Count() noexcept {
+size_t details::MinHookBackend::Count() noexcept {
     return hooks.size();
 }
 
-bool details::HookBackend::IsInitialized() noexcept {
+bool details::MinHookBackend::IsInitialized() noexcept {
     return isInitialized;
 }
 
-void details::HookBackend::Initialize() {
+void details::MinHookBackend::Initialize() {
     CheckStatus(MH_Initialize());
     isInitialized = true;
 }
 
-void details::HookBackend::Uninitialize() {
+void details::MinHookBackend::Uninitialize() {
     CheckStatus(MH_Uninitialize());
     isInitialized = false;
     hooks.clear();
 }
 
-bool details::HookBackend::IsCreated(void* target) noexcept {
+bool details::MinHookBackend::IsCreated(void* target) noexcept {
     return hooks.contains(target) && hooks[target].isCreated;
 }
 
-void details::HookBackend::Create(void* target, void* detour, void** original) {
+void details::MinHookBackend::Create(void* target, void* detour, void** original) {
     CheckStatus(MH_CreateHook(target, detour, original));
     hooks[target].isCreated = true;
 }
 
-void details::HookBackend::Remove(void* target) {
+void details::MinHookBackend::Remove(void* target) {
     CheckStatus(MH_RemoveHook(target));
     hooks.erase(target);
 }
 
-bool details::HookBackend::IsEnabled(void* target) noexcept {
+bool details::MinHookBackend::IsEnabled(void* target) noexcept {
     return hooks.contains(target) && hooks[target].isEnabled;
 }
 
-void details::HookBackend::Enable(void* target) {
+void details::MinHookBackend::Enable(void* target) {
     CheckStatus(MH_EnableHook(target));
     hooks[target].isEnabled = true;
 }
 
-void details::HookBackend::Disable(void* target) {
+void details::MinHookBackend::Disable(void* target) {
     CheckStatus(MH_DisableHook(target));
     hooks[target].isEnabled = false;
 }
