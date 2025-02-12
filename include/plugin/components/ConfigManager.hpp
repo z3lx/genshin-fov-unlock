@@ -35,7 +35,7 @@ private:
         bool enabled = true;
         int fov = 75;
         std::vector<int> fovPresets = { 30, 45, 60, 75, 90, 110 };
-        double smoothing = 0.2;
+        double smoothing = 0.125;
 
         int enableKey = VK_DOWN;
         int nextKey = VK_RIGHT;
