@@ -10,14 +10,14 @@
 
 #include <Windows.h>
 
-class InputManager final : public IComponent<Event> {
+class KeyboardObserver final : public IComponent<Event> {
 public:
     // TODO: Replace targetWindows with iterator?
-    explicit InputManager(
+    explicit KeyboardObserver(
         const std::weak_ptr<IMediator<Event>>& mediator,
         const std::unordered_set<HWND>& targetWindows
     );
-    ~InputManager() noexcept override;
+    ~KeyboardObserver() noexcept override;
 
     void SetEnable(bool value) noexcept;
 
@@ -25,7 +25,7 @@ public:
 
 private:
     struct Visitor {
-        InputManager& m;
+        KeyboardObserver& m;
 
         template <typename T>
         void operator()(const T& event) const;

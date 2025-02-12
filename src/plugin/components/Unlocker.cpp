@@ -149,7 +149,6 @@ void Unlocker::Visitor::operator()(const OnHookToggle& event) const try {
     LOG_D("OnHookToggle event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnHookToggle event: {}", e.what());
-    throw;
 }
 
 template <>
@@ -159,7 +158,6 @@ void Unlocker::Visitor::operator()(const OnEnableToggle& event) const try {
     LOG_D("OnEnableToggle event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnEnableToggle event: {}", e.what());
-    throw;
 }
 
 template <>
@@ -169,7 +167,6 @@ void Unlocker::Visitor::operator()(const OnFovChange& event) const try {
     LOG_D("OnFovChange event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnFovChange event: {}", e.what());
-    throw;
 }
 
 template <>
@@ -179,7 +176,6 @@ void Unlocker::Visitor::operator()(const OnSmoothingChange& event) const try {
     LOG_D("OnSmoothingChange event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnSmoothingChange event: {}", e.what());
-    throw;
 }
 
 template<>
@@ -189,7 +185,6 @@ void Unlocker::Visitor::operator()(const OnDumpBuffer& event) const try {
     LOG_D("OnDumpBuffer event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnDumpBuffer event: {}", e.what());
-    throw;
 }
 
 namespace sc = std::chrono;

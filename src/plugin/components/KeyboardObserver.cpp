@@ -1,4 +1,4 @@
-#include "plugin/components/InputManager.hpp"
+#include "plugin/components/KeyboardObserver.hpp"
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IComponent.hpp"
 #include "plugin/interfaces/IMediator.hpp"
@@ -19,12 +19,12 @@
 
 namespace {
     std::mutex mutex {};
-    std::unordered_set<InputManager*> instances {};
+    std::unordered_set<KeyboardObserver*> instances {};
     std::unique_ptr<WinHook> keyboardHook {};
     std::unordered_map<int, bool> keyStates {};
 }
 
-InputManager::InputManager(
+KeyboardObserver::KeyboardObserver(
     const std::weak_ptr<IMediator<Event>>& mediator,
     const std::unordered_set<HWND>& targetWindows) try
     : IComponent { mediator }
@@ -38,11 +38,11 @@ InputManager::InputManager(
     }
     instances.emplace(this);
 } catch (const std::exception& e) {
-    LOG_E("Failed to create InputManager: {}", e.what());
+    LOG_E("Failed to create KeyboardObserver: {}", e.what());
     throw;
 }
 
-InputManager::~InputManager() noexcept {
+KeyboardObserver::~KeyboardObserver() noexcept {
     std::lock_guard lock { mutex };
     instances.erase(this);
     if (instances.empty()) {
@@ -50,11 +50,11 @@ InputManager::~InputManager() noexcept {
     }
 }
 
-void InputManager::SetEnable(const bool value) noexcept {
+void KeyboardObserver::SetEnable(const bool value) noexcept {
     isEnabled = value;
 }
 
-LRESULT CALLBACK InputManager::KeyboardProc(
+LRESULT CALLBACK KeyboardObserver::KeyboardProc(
     const int nCode, const WPARAM wParam, const LPARAM lParam) noexcept {
     const auto hHook = keyboardHook ? keyboardHook->GetHandle() : nullptr;
     if (nCode != HC_ACTION) {
@@ -83,7 +83,7 @@ LRESULT CALLBACK InputManager::KeyboardProc(
     return CallNextHookEx(hHook, nCode, wParam, lParam);
 }
 
-void InputManager::Notify(const Event& event) noexcept try {
+void KeyboardObserver::Notify(const Event& event) noexcept try {
     std::lock_guard lock { mutex };
     HWND currentWindow = GetForegroundWindow();
     for (const auto& instance : instances) {
@@ -106,15 +106,15 @@ void InputManager::Notify(const Event& event) noexcept try {
     LOG_E("Failed to notify instances: {}", e.what());
 }
 
-void InputManager::Handle(const Event& event) {
+void KeyboardObserver::Handle(const Event& event) {
     std::visit(Visitor { *this }, event);
 }
 
 template <typename T>
-void InputManager::Visitor::operator()(const T& event) const { }
+void KeyboardObserver::Visitor::operator()(const T& event) const { }
 
 template <>
-void InputManager::Visitor::operator()(const OnPluginStart& event) const try {
+void KeyboardObserver::Visitor::operator()(const OnPluginStart& event) const try {
     LOG_D("Handling OnPluginStart event");
     m.SetEnable(true);
     LOG_D("OnPluginStart event handled");
@@ -123,7 +123,7 @@ void InputManager::Visitor::operator()(const OnPluginStart& event) const try {
 }
 
 template <>
-void InputManager::Visitor::operator()(const OnPluginEnd& event) const try {
+void KeyboardObserver::Visitor::operator()(const OnPluginEnd& event) const try {
     LOG_D("Handling OnPluginEnd event");
     m.SetEnable(false);
     LOG_D("OnPluginEnd event handled");

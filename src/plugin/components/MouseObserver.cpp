@@ -1,9 +1,8 @@
-#include "plugin/components/MouseMonitor.hpp"
+#include "plugin/components/MouseObserver.hpp"
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IMediator.hpp"
 #include "utils/log/Logger.hpp"
 
-#include <atomic>
 #include <chrono>
 #include <exception>
 #include <memory>
@@ -15,12 +14,12 @@
 
 #include <Windows.h>
 
-std::unordered_set<MouseMonitor*> MouseMonitor::instances {};
-std::mutex MouseMonitor::mutex {};
-bool MouseMonitor::isPolling { false };
-std::thread MouseMonitor::pollingThread {};
+std::unordered_set<MouseObserver*> MouseObserver::instances {};
+std::mutex MouseObserver::mutex {};
+bool MouseObserver::isPolling { false };
+std::thread MouseObserver::pollingThread {};
 
-void MouseMonitor::StartPolling() {
+void MouseObserver::StartPolling() {
     std::lock_guard guard { mutex };
     if (isPolling) {
         return;
@@ -38,7 +37,7 @@ void MouseMonitor::StartPolling() {
     pollingThread = std::thread { loop };
 }
 
-void MouseMonitor::StopPolling() noexcept {
+void MouseObserver::StopPolling() noexcept {
     std::lock_guard guard { mutex };
     if (!isPolling) {
         return;
@@ -52,8 +51,8 @@ void MouseMonitor::StopPolling() noexcept {
 
 // Will only notify if the cursor visibility changes
 // Unfocusing a window is will interpret as the cursor being shown
-// Will always notify the first time a MouseMonitor instance is added
-void MouseMonitor::Poll() noexcept {
+// Will always notify the first time an instance is added
+void MouseObserver::Poll() noexcept {
     CURSORINFO cursorinfo { .cbSize = sizeof(cursorinfo) };
     bool isCursorVisible {};
     if (GetCursorInfo(&cursorinfo)) {
@@ -91,7 +90,7 @@ void MouseMonitor::Poll() noexcept {
     }
 }
 
-MouseMonitor::MouseMonitor(
+MouseObserver::MouseObserver(
     const std::weak_ptr<IMediator<Event>>& mediator,
     const std::unordered_set<HWND>& targetWindows) try
     : IComponent { mediator }
@@ -103,34 +102,34 @@ MouseMonitor::MouseMonitor(
         StartPolling();
     }
 } catch (const std::exception& e) {
-    LOG_E("Failed to create MouseMonitor: {}", e.what());
+    LOG_E("Failed to create MouseObserver: {}", e.what());
     throw;
 }
 
-MouseMonitor::~MouseMonitor() noexcept {
+MouseObserver::~MouseObserver() noexcept {
     if (instances.size() == 1) {
         StopPolling();
     }
     instances.erase(this);
 }
 
-void MouseMonitor::SetEnable(const bool value) noexcept {
+void MouseObserver::SetEnable(const bool value) noexcept {
     isEnabled = value;
 }
 
-void MouseMonitor::Handle(const Event& event) {
+void MouseObserver::Handle(const Event& event) {
     std::visit(Visitor { *this }, event);
 }
 
 template <typename T>
-void MouseMonitor::Visitor::operator()(const T&) const { }
+void MouseObserver::Visitor::operator()(const T&) const { }
 
 template <>
-void MouseMonitor::Visitor::operator()(const OnPluginStart&) const {
+void MouseObserver::Visitor::operator()(const OnPluginStart&) const {
     m.SetEnable(true);
 }
 
 template <>
-void MouseMonitor::Visitor::operator()(const OnPluginEnd&) const {
+void MouseObserver::Visitor::operator()(const OnPluginEnd&) const {
     m.SetEnable(false);
 }

@@ -11,13 +11,13 @@
 #include <thread>
 #include <unordered_set>
 
-class MouseMonitor final : public IComponent<Event> {
+class MouseObserver final : public IComponent<Event> {
 public:
-    explicit MouseMonitor(
+    explicit MouseObserver(
         const std::weak_ptr<IMediator<Event>>& mediator,
         const std::unordered_set<HWND>& targetWindows
     );
-    ~MouseMonitor() noexcept override;
+    ~MouseObserver() noexcept override;
 
     void SetEnable(bool value) noexcept;
 
@@ -30,7 +30,7 @@ private:
 
     struct Visitor;
 
-    static std::unordered_set<MouseMonitor*> instances;
+    static std::unordered_set<MouseObserver*> instances;
     static std::mutex mutex;
 
     static void StartPolling();
@@ -40,8 +40,8 @@ private:
     static std::thread pollingThread;
 };
 
-struct MouseMonitor::Visitor {
-    MouseMonitor& m;
+struct MouseObserver::Visitor {
+    MouseObserver& m;
 
     template <typename T>
     void operator()(const T& event) const;
