@@ -1,4 +1,4 @@
-![Game Version](https://img.shields.io/badge/version-%205.3-brightgreen)
+![Game Version](https://img.shields.io/badge/version-%205.4-brightgreen)
 ![GitHub all releases](https://img.shields.io/github/downloads/z3lx/genshin-fov-unlock/total)
 
 # Genshin Impact FOV Unlocker
@@ -31,9 +31,7 @@ Furthermore, while the plugin itself is lightweight, increasing the field of vie
 The plugin should now be loaded the next time the game is launched with the **genshin-fps-unlock** tool by running the **unlockfps_nc.exe** executable. For more information on how to use the tool, refer to the project's [**README**](https://github.com/34736384/genshin-fps-unlock/blob/netcore/README.md).
 
 ## Usage
-By default, the <kbd>left arrow</kbd> and <kbd>right arrow</kbd> keys cycle through the preset field of view values, and the <kbd>down arrow</kbd> key enables or disables the plugin. Due to the integrity check at the start of the game, it is now also needed to **manually hook the plugin** with the <kbd>up arrow</kbd> key after logging in, ideally **when in the initial loading screen of the game**, as hooking it anywhere else has a non-zero chance to cause it to crash. Refer to the video below. Unhooking and rehooking the plugin can also be done by pressing the <kbd>up arrow</kbd> key again when transitioning between coop and single player mode.
-
-https://github.com/user-attachments/assets/70d59071-addd-47f0-a959-ff8edc58d78c
+By default, the <kbd>left arrow</kbd> and <kbd>right arrow</kbd> keys cycle through the preset field of view values, and the <kbd>down arrow</kbd> key enables or disables the plugin.
 
 ## Configuration
 The plugin's behavior and settings can optionally be customized through the **fov_config.json** file located in the same directory as the **genshin_fov_unlock.dll** library. The following settings are available for configuration:
@@ -41,8 +39,7 @@ The plugin's behavior and settings can optionally be customized through the **fo
 - `enabled` (bool): Default state of the plugin when the game starts.
 - `fov` (int): Default FOV to use when the game starts.
 - `fov_presets` (array of int): List of FOV values to cycle through using keybindings.
-- `smoothing` (float): Time constant in seconds for the exponential filter. Lower values make the FOV changes more responsive. Set to 0 to disable smoothing.
-- `hook_key` (int): Key to hook the plugin into the game. 
+- `smoothing` (float): Time constant in seconds for the exponential filter. Lower values make the FOV changes more responsive. Setting this value too high may trigger the game's integrity check in some cases.
 - `enable_key` (int): Key to enable or disable the plugin.
 - `next_key` (int): Key to cycle to the next FOV preset.
 - `prev_key` (int): Key to cycle to the previous FOV preset.
@@ -64,8 +61,7 @@ The default configuration is as follows:
         90,
         110
     ],
-    "smoothing": 0.2,
-    "hook_key": 38,
+    "smoothing": 0.125,
     "enable_key": 40,
     "next_key": 39,
     "prev_key": 37,
