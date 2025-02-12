@@ -70,10 +70,10 @@ void MinHook<Ret, Args...>::Disable() const {
 
 template <typename Ret, typename... Args>
 Ret MinHook<Ret, Args...>::CallOriginal(Args... args) const {
-    if (IsCreated() && IsEnabled()) {
-        return reinterpret_cast<FuncPtr>(original)(
-            std::forward<Args>(args)...
-        );
+    if (!IsCreated()) {
+        throw std::runtime_error("Hook must be created");
     }
-    throw std::runtime_error("Hook must be created and enabled");
+    return reinterpret_cast<FuncPtr>(original)(
+        std::forward<Args>(args)...
+    );
 }

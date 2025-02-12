@@ -40,6 +40,7 @@ private:
     static std::unique_ptr<MinHook<void, void*, float>> hook;
     static ExponentialFilter<float> filter;
 
+    static bool isHooked; // TODO: Refactor
     static bool isEnabled;
     static int overrideFov;
 
