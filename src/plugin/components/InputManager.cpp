@@ -2,6 +2,7 @@
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IComponent.hpp"
 #include "plugin/interfaces/IMediator.hpp"
+#include "utils/WinHook.hpp"
 #include "utils/log/Logger.hpp"
 
 #include <algorithm>
@@ -13,41 +14,39 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
-#include <vector>
 
 #include <Windows.h>
 
-HHOOK InputManager::hHook = nullptr;
-std::mutex InputManager::mutex {};
-std::unordered_set<InputManager*> InputManager::instances {};
-std::unordered_map<int, bool> InputManager::keyStates {};
+namespace {
+    std::mutex mutex {};
+    std::unordered_set<InputManager*> instances {};
+    std::unique_ptr<WinHook> keyboardHook {};
+    std::unordered_map<int, bool> keyStates {};
+}
 
 InputManager::InputManager(
     const std::weak_ptr<IMediator<Event>>& mediator,
-    const std::vector<HWND>& targetWindows) try
-    : IComponent(mediator), isEnabled(false), targetWindows(targetWindows) {
+    const std::unordered_set<HWND>& targetWindows) try
+    : IComponent { mediator }
+    , isEnabled { false }
+    , targetWindows { targetWindows } {
     std::lock_guard lock { mutex };
-    instances.emplace(this);
-    if (instances.size() == 1) {
-        hHook = SetHook();
+    if (keyboardHook == nullptr) {
+        keyboardHook = std::make_unique<WinHook>(
+            HookProcedure::WhKeyboardLl, KeyboardProc
+        );
     }
+    instances.emplace(this);
 } catch (const std::exception& e) {
     LOG_E("Failed to create InputManager: {}", e.what());
-    instances.erase(this);
     throw;
 }
 
 InputManager::~InputManager() noexcept {
-    try {
-        std::lock_guard lock { mutex };
-        instances.erase(this);
-        if (instances.empty()) {
-            RemoveHook(hHook);
-        }
-    } catch (const std::exception& e) {
-        // Hook automatically removed when DLL is unloaded
-        // Ignore exception here
-        // LOG_E("Failed to destroy InputManager: {}", e.what());
+    std::lock_guard lock { mutex };
+    instances.erase(this);
+    if (instances.empty()) {
+        keyboardHook = nullptr;
     }
 }
 
@@ -55,41 +54,9 @@ void InputManager::SetEnable(const bool value) noexcept {
     isEnabled = value;
 }
 
-HHOOK InputManager::SetHook() {
-    HHOOK handle = nullptr;
-    std::promise<void> promise {};
-    std::future<void> future = promise.get_future();
-    std::thread {[&handle, &promise]() {
-        handle = SetWindowsHookEx(
-            WH_KEYBOARD_LL, KeyboardProc, nullptr, 0
-        );
-        if (!handle) {
-            promise.set_exception(std::make_exception_ptr(
-                std::runtime_error { std::to_string(GetLastError()) }
-            ));
-            return;
-        }
-        promise.set_value();
-
-        MSG msg;
-        while (GetMessage(&msg, nullptr, 0, 0)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }}.detach();
-    future.get();
-    return handle;
-}
-
-void InputManager::RemoveHook(HHOOK& handle) {
-    if (!UnhookWindowsHookEx(handle)) {
-        throw std::runtime_error { std::to_string(GetLastError()) };
-    }
-    handle = nullptr;
-}
-
 LRESULT CALLBACK InputManager::KeyboardProc(
     const int nCode, const WPARAM wParam, const LPARAM lParam) noexcept {
+    const auto hHook = keyboardHook ? keyboardHook->GetHandle() : nullptr;
     if (nCode != HC_ACTION) {
         return CallNextHookEx(hHook, nCode, wParam, lParam);
     }
@@ -120,16 +87,13 @@ void InputManager::Notify(const Event& event) noexcept try {
     std::lock_guard lock { mutex };
     HWND currentWindow = GetForegroundWindow();
     for (const auto& instance : instances) {
-        if (!instance->isEnabled) {
+        if (!instance->isEnabled ||
+            !instance->targetWindows.contains(currentWindow)) {
             continue;
         }
         const auto mediator = instance->weakMediator.lock();
         if (!mediator) {
             LOG_E("Mediator is expired");
-            continue;
-        }
-        if (const auto targets = instance->targetWindows; !targets.empty() &&
-            std::ranges::find(targets, currentWindow) == targets.end()) {
             continue;
         }
         try {

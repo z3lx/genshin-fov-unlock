@@ -6,17 +6,16 @@
 
 #include <memory>
 #include <mutex>
-#include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
 #include <Windows.h>
 
 class InputManager final : public IComponent<Event> {
 public:
+    // TODO: Replace targetWindows with iterator?
     explicit InputManager(
         const std::weak_ptr<IMediator<Event>>& mediator,
-        const std::vector<HWND>& targetWindows = {}
+        const std::unordered_set<HWND>& targetWindows
     );
     ~InputManager() noexcept override;
 
@@ -32,19 +31,12 @@ private:
         void operator()(const T& event) const;
     };
 
-    static HHOOK SetHook();
-    static void RemoveHook(HHOOK& handle);
+    static void Notify(const Event& event) noexcept;
 
     static LRESULT CALLBACK KeyboardProc(
         int nCode, WPARAM wParam, LPARAM lParam
     ) noexcept;
-    static void Notify(const Event& event) noexcept;
-
-    static HHOOK hHook;
-    static std::mutex mutex;
-    static std::unordered_set<InputManager*> instances;
-    static std::unordered_map<int, bool> keyStates;
 
     bool isEnabled;
-    std::vector<HWND> targetWindows;
+    std::unordered_set<HWND> targetWindows;
 };

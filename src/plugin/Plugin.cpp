@@ -10,8 +10,8 @@
 #include <memory>
 #include <thread>
 #include <tuple>
+#include <unordered_set>
 #include <utility>
-#include <vector>
 
 #include <Windows.h>
 
@@ -74,19 +74,19 @@ fs::path Plugin::GetPath() {
     return path;
 }
 
-std::vector<HWND> Plugin::GetWindows() {
+std::unordered_set<HWND> Plugin::GetWindows() {
     DWORD targetProcessId = GetCurrentProcessId();
-    std::vector<HWND> targetWindows {};
+    std::unordered_set<HWND> targetWindows {};
     std::tuple params = std::tie(targetProcessId, targetWindows);
 
     auto callback = [](HWND hwnd, LPARAM lParam) -> BOOL {
         auto& [targetProcessId, targetWindows] = *reinterpret_cast<
-            std::tuple<DWORD&, std::vector<HWND>&>*>(lParam);
+            std::tuple<DWORD&, std::unordered_set<HWND>&>*>(lParam);
 
         DWORD processId;
         GetWindowThreadProcessId(hwnd, &processId);
         if (processId == targetProcessId) {
-            targetWindows.push_back(hwnd);
+            targetWindows.emplace(hwnd);
         }
         return TRUE;
     };
