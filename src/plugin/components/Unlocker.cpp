@@ -23,8 +23,8 @@
 
 #include <Windows.h>
 
-constexpr auto OFFSET_GL = 0xF08370;
-constexpr auto OFFSET_CN = 0xF0A370;
+constexpr auto OFFSET_GL = 0xEB6BE0;
+constexpr auto OFFSET_CN = 0xEB8BD0;
 
 // TODO: Refactor unlocker, it's a mess T^T
 
