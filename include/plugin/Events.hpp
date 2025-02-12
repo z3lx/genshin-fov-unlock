@@ -39,6 +39,10 @@ struct OnKeyUp {
     const int vKey;
 };
 
+struct OnCursorVisibilityChange {
+    const bool isCursorVisible;
+};
+
 using Event = std::variant<
     OnPluginStart,
     OnPluginEnd,
@@ -49,5 +53,6 @@ using Event = std::variant<
     OnDumpBuffer,
     OnKeyDown,
     OnKeyHold,
-    OnKeyUp
+    OnKeyUp,
+    OnCursorVisibilityChange
 >;
