@@ -1,6 +1,7 @@
 #include "plugin/Plugin.hpp"
 #include "plugin/components/ConfigManager.hpp"
-#include "plugin/components/InputManager.hpp"
+#include "plugin/components/KeyboardObserver.hpp"
+#include "plugin/components/MouseObserver.hpp"
 #include "plugin/components/Unlocker.hpp"
 #include "utils/log/Logger.hpp"
 #include "utils/log/sinks/FileSink.hpp"
@@ -10,8 +11,8 @@
 #include <memory>
 #include <thread>
 #include <tuple>
+#include <unordered_set>
 #include <utility>
-#include <vector>
 
 #include <Windows.h>
 
@@ -27,9 +28,11 @@ void Plugin::Initialize() try {
     LOG_D("Initializing plugin");
     LOG_D("Working directory: {}", GetPath().string());
 
+    const auto targetWindows = GetWindows();
     plugin = std::shared_ptr<Plugin>(new Plugin());
     plugin->AddComponents(
-        std::make_unique<InputManager>(plugin, GetWindows()),
+        std::make_unique<MouseObserver>(plugin, targetWindows),
+        std::make_unique<KeyboardObserver>(plugin, targetWindows),
         std::make_unique<ConfigManager>(plugin, GetPath() / "fov_config.json"),
         std::make_unique<Unlocker>(plugin)
     );
@@ -74,19 +77,19 @@ fs::path Plugin::GetPath() {
     return path;
 }
 
-std::vector<HWND> Plugin::GetWindows() {
+std::unordered_set<HWND> Plugin::GetWindows() {
     DWORD targetProcessId = GetCurrentProcessId();
-    std::vector<HWND> targetWindows {};
+    std::unordered_set<HWND> targetWindows {};
     std::tuple params = std::tie(targetProcessId, targetWindows);
 
     auto callback = [](HWND hwnd, LPARAM lParam) -> BOOL {
         auto& [targetProcessId, targetWindows] = *reinterpret_cast<
-            std::tuple<DWORD&, std::vector<HWND>&>*>(lParam);
+            std::tuple<DWORD&, std::unordered_set<HWND>&>*>(lParam);
 
         DWORD processId;
         GetWindowThreadProcessId(hwnd, &processId);
         if (processId == targetProcessId) {
-            targetWindows.push_back(hwnd);
+            targetWindows.emplace(hwnd);
         }
         return TRUE;
     };

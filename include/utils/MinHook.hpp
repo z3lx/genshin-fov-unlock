@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace details {
-    class HookBackend {
+    class MinHookBackend {
     protected:
         [[nodiscard]] static size_t Count() noexcept;
 
@@ -22,7 +22,7 @@ namespace details {
 }
 
 template <typename Ret, typename... Args>
-class MinHook : public details::HookBackend {
+class MinHook : public details::MinHookBackend {
 public:
     MinHook();
     MinHook(void* target, void* detour, bool enable = false);

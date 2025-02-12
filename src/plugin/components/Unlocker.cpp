@@ -26,16 +26,19 @@
 constexpr auto OFFSET_GL = 0xF08370;
 constexpr auto OFFSET_CN = 0xF0A370;
 
+// TODO: Refactor unlocker, it's a mess T^T
+
 std::mutex Unlocker::mutex {};
 std::unique_ptr<MinHook<void, void*, float>> Unlocker::hook = nullptr;
 ExponentialFilter<float> Unlocker::filter {};
 
+bool Unlocker::isHooked = false;
 bool Unlocker::isEnabled = false;
 int Unlocker::overrideFov = 45;
 
 int Unlocker::setFovCount = 0;
 void* Unlocker::previousInstance = nullptr;
-float Unlocker::previousFov = 0.0f;
+float Unlocker::previousFov = 45.0f;
 bool Unlocker::isPreviousFov = false;
 
 Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
@@ -71,12 +74,15 @@ Unlocker::~Unlocker() noexcept {
     }
 }
 
+bool justEnabled = false;
 void Unlocker::SetHook(const bool value) const {
     std::lock_guard lock { mutex };
+    isHooked = value;
     if (value) {
         hook->Enable();
+        justEnabled = true;
     } else {
-        hook->Disable();
+        // hook->Disable();
     }
 }
 
@@ -95,10 +101,6 @@ void Unlocker::SetSmoothing(const float value) noexcept {
 void Unlocker::HkSetFieldOfView(void* instance, float value) noexcept {
     std::lock_guard lock { mutex };
     try {
-        if (!hook->IsEnabled()) {
-            return;
-        }
-
         ++setFovCount;
         if (const bool isDefaultFov = value == 45.0f;
             instance == previousInstance &&
@@ -113,13 +115,20 @@ void Unlocker::HkSetFieldOfView(void* instance, float value) noexcept {
             }
             setFovCount = 0;
 
-            const float target = isEnabled ?
+            if (justEnabled) {
+                justEnabled = false;
+                filter.Update(value);
+            }
+            const float target = (isHooked && isEnabled) ?
                 static_cast<float>(overrideFov) : previousFov;
             const float filtered = filter.Update(target);
 
-            if (isEnabled || !isPreviousFov) {
+            if ((isHooked && isEnabled) || !isPreviousFov) {
                 isPreviousFov = std::abs(previousFov - filtered) < 0.1f;
                 value = filtered;
+            } else if (!isHooked) {
+                isPreviousFov = false;
+                hook->Disable();
             }
         } else {
             const auto rep = std::bit_cast<std::uint32_t>(value);
@@ -149,7 +158,6 @@ void Unlocker::Visitor::operator()(const OnHookToggle& event) const try {
     LOG_D("OnHookToggle event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnHookToggle event: {}", e.what());
-    throw;
 }
 
 template <>
@@ -159,7 +167,6 @@ void Unlocker::Visitor::operator()(const OnEnableToggle& event) const try {
     LOG_D("OnEnableToggle event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnEnableToggle event: {}", e.what());
-    throw;
 }
 
 template <>
@@ -169,7 +176,6 @@ void Unlocker::Visitor::operator()(const OnFovChange& event) const try {
     LOG_D("OnFovChange event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnFovChange event: {}", e.what());
-    throw;
 }
 
 template <>
@@ -179,7 +185,6 @@ void Unlocker::Visitor::operator()(const OnSmoothingChange& event) const try {
     LOG_D("OnSmoothingChange event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnSmoothingChange event: {}", e.what());
-    throw;
 }
 
 template<>
@@ -189,7 +194,6 @@ void Unlocker::Visitor::operator()(const OnDumpBuffer& event) const try {
     LOG_D("OnDumpBuffer event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnDumpBuffer event: {}", e.what());
-    throw;
 }
 
 namespace sc = std::chrono;

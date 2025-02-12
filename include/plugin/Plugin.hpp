@@ -5,7 +5,7 @@
 
 #include <filesystem>
 #include <memory>
-#include <vector>
+#include <unordered_set>
 
 #include <Windows.h>
 
@@ -18,6 +18,6 @@ public:
 private:
     Plugin();
     static std::filesystem::path GetPath();
-    static std::vector<HWND> GetWindows();
+    static std::unordered_set<HWND> GetWindows();
     static std::shared_ptr<Plugin> plugin;
 };

@@ -32,13 +32,11 @@ private:
     };
 
     struct Config {
-        bool hooked = false;
         bool enabled = true;
         int fov = 75;
         std::vector<int> fovPresets = { 30, 45, 60, 75, 90, 110 };
-        double smoothing = 0.2;
+        double smoothing = 0.125;
 
-        int hookKey = VK_UP;
         int enableKey = VK_DOWN;
         int nextKey = VK_RIGHT;
         int prevKey = VK_LEFT;
@@ -47,4 +45,6 @@ private:
 
     Config config;
     std::filesystem::path filePath;
+
+    bool hooked = false; // TODO: Refactor
 };

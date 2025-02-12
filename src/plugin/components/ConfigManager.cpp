@@ -17,7 +17,6 @@ constexpr auto ENABLED = "enabled";
 constexpr auto FOV = "fov";
 constexpr auto FOV_PRESETS = "fov_presets";
 constexpr auto SMOOTHING = "smoothing";
-constexpr auto HOOK_KEY = "hook_key";
 constexpr auto ENABLE_KEY = "enable_key";
 constexpr auto NEXT_KEY = "next_key";
 constexpr auto PREV_KEY = "prev_key";
@@ -60,8 +59,8 @@ void ConfigManager::Load() try {
         return;
     }
 
-    auto& [hooked, enabled, fov, fovPresets, smoothing,
-        hookKey, enableKey, nextKey, prevKey, dumpKey] = config;
+    auto& [enabled, fov, fovPresets, smoothing,
+        enableKey, nextKey, prevKey, dumpKey] = config;
 
     try {
         std::ifstream file { filePath };
@@ -80,8 +79,6 @@ void ConfigManager::Load() try {
             }));
         TRY_GET_TO_IF(j, SMOOTHING, smoothing,
             smoothing >= 0.0 && smoothing <= 1.0);
-        TRY_GET_TO_IF(j, HOOK_KEY, hookKey,
-            hookKey > 0 && hookKey < 255);
         TRY_GET_TO_IF(j, ENABLE_KEY, enableKey,
             enableKey > 0 && enableKey < 255);
         TRY_GET_TO_IF(j, NEXT_KEY, nextKey,
@@ -100,7 +97,6 @@ void ConfigManager::Load() try {
     const auto last = std::ranges::unique(fovPresets).begin();
     fovPresets.erase(last, fovPresets.end());
 
-    mediator->Notify(OnHookToggle { hooked });
     mediator->Notify(OnEnableToggle { enabled });
     mediator->Notify(OnFovChange { fov });
     mediator->Notify(OnSmoothingChange { smoothing });
@@ -113,15 +109,14 @@ void ConfigManager::Load() try {
 void ConfigManager::Save() try {
     LOG_D("Saving config to {}", filePath.string());
 
-    auto& [hooked, enabled, fov, fovPresets, smoothing,
-        hookKey, enableKey, nextKey, prevKey, dumpKey] = config;
+    auto& [enabled, fov, fovPresets, smoothing,
+        enableKey, nextKey, prevKey, dumpKey] = config;
 
     const nlohmann::ordered_json j {
         { ENABLED, enabled },
         { FOV, fov },
         { FOV_PRESETS, fovPresets },
         { SMOOTHING, smoothing },
-        { HOOK_KEY, hookKey },
         { ENABLE_KEY, enableKey },
         { NEXT_KEY, nextKey },
         { PREV_KEY, prevKey },
@@ -148,49 +143,38 @@ void ConfigManager::Visitor::operator()(const T& event) const { }
 
 template <>
 void ConfigManager::Visitor::operator()(const OnPluginStart& event) const try {
-    LOG_D("Handling OnPluginStart event");
     m.Load();
-    LOG_D("OnPluginStart event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnPluginStart event: {}", e.what());
-    throw;
 }
 
 template <>
 void ConfigManager::Visitor::operator()(const OnPluginEnd& event) const try {
-    LOG_D("Handling OnPluginEnd event");
     m.Save();
-    LOG_D("OnPluginEnd event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnPluginEnd event: {}", e.what());
-    throw;
 }
 
 template <>
 void ConfigManager::Visitor::operator()(const OnKeyDown& event) const try {
-    LOG_D("Handling OnKeyDown event with vKey = {}", event.vKey);
     const auto mediator = m.weakMediator.lock();
     if (!mediator) {
         LOG_E("Mediator is expired");
         return;
     }
 
-    auto& [hooked, enabled, fov, fovPresets, smoothing,
-        hookKey, enableKey, nextKey, prevKey, dumpKey] = m.config;
+    auto& [enabled, fov, fovPresets, smoothing,
+        enableKey, nextKey, prevKey, dumpKey] = m.config;
 
-    if (event.vKey == hookKey) {
-        const auto value = !hooked;
-        mediator->Notify(OnHookToggle { .hooked = value });
-        hooked = value;
-    } else if (!hooked) {
-        LOG_D("Event ignored due to unhooked state");
+    if (!m.hooked) { // TODO: Refactor
         return;
-    } else if (event.vKey == enableKey) {
+    }
+
+    if (event.vKey == enableKey) {
         const auto value = !enabled;
         mediator->Notify(OnEnableToggle { .enabled = value });
         enabled = value;
     } else if (!enabled) {
-        LOG_D("Event ignored due to disabled state");
         return;
     } else if (event.vKey == nextKey) {
         const auto it = std::ranges::find_if(
@@ -210,13 +194,18 @@ void ConfigManager::Visitor::operator()(const OnKeyDown& event) const try {
         fov = value;
     } else if (event.vKey == dumpKey) {
         mediator->Notify(OnDumpBuffer {});
-    } else {
-        LOG_D("Event ignored due to unknown vKey");
-        return;
     }
-
-    LOG_D("OnKeyDown event handled");
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnKeyDown event: {}", e.what());
-    throw;
+}
+
+template <>
+void ConfigManager::Visitor::operator()(const OnCursorVisibilityChange& event) const try {
+    // TODO: Synchronize
+    m.hooked = !event.isCursorVisible;
+    if (const auto mediator = m.weakMediator.lock()) {
+        mediator->Notify(OnHookToggle { m.hooked });
+    }
+} catch (const std::exception& e) {
+    LOG_E("Failed to handle OnCursorVisibilityChange event: {}", e.what());
 }

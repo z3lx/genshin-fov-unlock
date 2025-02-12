@@ -5,8 +5,8 @@
 template <typename Ret, typename... Args>
 MinHook<Ret, Args...>::MinHook()
     : target(nullptr), original(nullptr) {
-    if (!HookBackend::IsInitialized()) {
-        HookBackend::Initialize();
+    if (!MinHookBackend::IsInitialized()) {
+        MinHookBackend::Initialize();
     }
 }
 
@@ -19,14 +19,14 @@ MinHook<Ret, Args...>::MinHook(void* target, void* detour, const bool enable)
 template <typename Ret, typename... Args>
 MinHook<Ret, Args...>::~MinHook() {
     Remove();
-    if (HookBackend::Count() == 0) {
-        HookBackend::Uninitialize();
+    if (MinHookBackend::Count() == 0) {
+        MinHookBackend::Uninitialize();
     }
 }
 
 template <typename Ret, typename... Args>
 bool MinHook<Ret, Args...>::IsCreated() const noexcept {
-    return HookBackend::IsCreated(target);
+    return MinHookBackend::IsCreated(target);
 }
 
 template <typename Ret, typename... Args>
@@ -35,7 +35,7 @@ void MinHook<Ret, Args...>::Create(void* target, void* detour, const bool enable
         throw std::invalid_argument("Target and detour must not be null");
     }
     Remove();
-    HookBackend::Create(target, detour, &original);
+    MinHookBackend::Create(target, detour, &original);
     this->target = target;
     if (enable) {
         Enable();
@@ -45,35 +45,35 @@ void MinHook<Ret, Args...>::Create(void* target, void* detour, const bool enable
 template <typename Ret, typename... Args>
 void MinHook<Ret, Args...>::Remove() const {
     if (IsCreated()) {
-        HookBackend::Remove(target);
+        MinHookBackend::Remove(target);
     }
 }
 
 template <typename Ret, typename... Args>
 bool MinHook<Ret, Args...>::IsEnabled() const noexcept {
-    return HookBackend::IsEnabled(target);
+    return MinHookBackend::IsEnabled(target);
 }
 
 template <typename Ret, typename... Args>
 void MinHook<Ret, Args...>::Enable() const {
     if (!IsEnabled()) {
-        HookBackend::Enable(target);
+        MinHookBackend::Enable(target);
     }
 }
 
 template <typename Ret, typename... Args>
 void MinHook<Ret, Args...>::Disable() const {
     if (IsCreated() && IsEnabled()) {
-        HookBackend::Disable(target);
+        MinHookBackend::Disable(target);
     }
 }
 
 template <typename Ret, typename... Args>
 Ret MinHook<Ret, Args...>::CallOriginal(Args... args) const {
-    if (IsCreated() && IsEnabled()) {
-        return reinterpret_cast<FuncPtr>(original)(
-            std::forward<Args>(args)...
-        );
+    if (!IsCreated()) {
+        throw std::runtime_error("Hook must be created");
     }
-    throw std::runtime_error("Hook must be created and enabled");
+    return reinterpret_cast<FuncPtr>(original)(
+        std::forward<Args>(args)...
+    );
 }
