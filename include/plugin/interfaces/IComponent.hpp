@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <utility>
 
 template <typename Event>
 class IMediator;
@@ -9,16 +8,42 @@ class IMediator;
 template <typename Event>
 class IComponent {
 public:
-    explicit IComponent(std::weak_ptr<IMediator<Event>> mediator) noexcept;
-    IComponent() = delete;
+    using MediatorPtr = std::weak_ptr<IMediator<Event>>;
+
+    explicit IComponent(MediatorPtr mediator) noexcept;
+    IComponent() noexcept = default;
     virtual ~IComponent() noexcept = default;
 
     virtual void Handle(const Event& event) noexcept = 0;
 
+    [[nodiscard]] MediatorPtr GetMediator() const noexcept;
+    void SetMediator(MediatorPtr mediator) noexcept;
+
 protected:
-    std::weak_ptr<IMediator<Event>> weakMediator;
+    void Notify(const Event& event) noexcept;
+
+private:
+    MediatorPtr mediator;
 };
 
 template <typename Event>
-IComponent<Event>::IComponent(std::weak_ptr<IMediator<Event>> mediator) noexcept
-    : weakMediator { std::move(mediator) } { }
+IComponent<Event>::IComponent(MediatorPtr mediator) noexcept
+    : mediator { mediator } { }
+
+template <typename Event>
+typename IComponent<Event>::MediatorPtr
+IComponent<Event>::GetMediator() const noexcept {
+    return mediator;
+}
+
+template <typename Event>
+void IComponent<Event>::SetMediator(MediatorPtr mediator) noexcept {
+    this->mediator = mediator;
+}
+
+template <typename Event>
+void IComponent<Event>::Notify(const Event& event) noexcept {
+    if (const auto mediator = GetMediator().lock()) {
+        mediator->Notify(event);
+    }
+}
