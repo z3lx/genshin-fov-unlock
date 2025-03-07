@@ -5,7 +5,6 @@
 #include "plugin/interfaces/IMediator.hpp"
 
 #include <memory>
-#include <mutex>
 #include <unordered_set>
 
 #include <Windows.h>
@@ -14,29 +13,19 @@ class KeyboardObserver final : public IComponent<Event> {
 public:
     // TODO: Replace targetWindows with iterator?
     explicit KeyboardObserver(
-        const std::weak_ptr<IMediator<Event>>& mediator,
+        std::weak_ptr<IMediator<Event>> mediator,
         const std::unordered_set<HWND>& targetWindows
     );
     ~KeyboardObserver() noexcept override;
 
-    void SetEnable(bool value) noexcept;
+    [[nodiscard]] bool IsEnabled() const noexcept;
+    [[nodiscard]] const std::unordered_set<HWND>& GetTargetWindows() const noexcept;
+    void SetEnabled(bool value) noexcept;
+    void SetTargetWindows(const std::unordered_set<HWND>& windows) noexcept;
 
-    void Handle(const Event& event) override;
+    void Handle(const Event& event) noexcept override;
 
 private:
-    struct Visitor {
-        KeyboardObserver& m;
-
-        template <typename T>
-        void operator()(const T& event) const;
-    };
-
-    static void Notify(const Event& event) noexcept;
-
-    static LRESULT CALLBACK KeyboardProc(
-        int nCode, WPARAM wParam, LPARAM lParam
-    ) noexcept;
-
     bool isEnabled;
     std::unordered_set<HWND> targetWindows;
 };

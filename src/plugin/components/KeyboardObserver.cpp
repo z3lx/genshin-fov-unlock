@@ -5,128 +5,166 @@
 #include "utils/WinHook.hpp"
 #include "utils/log/Logger.hpp"
 
-#include <algorithm>
-#include <future>
+#include <exception>
 #include <memory>
 #include <mutex>
-#include <stdexcept>
-#include <thread>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 
 #include <Windows.h>
 
 namespace {
-    std::mutex mutex {};
-    std::unordered_set<KeyboardObserver*> instances {};
-    std::unique_ptr<WinHook> keyboardHook {};
-    std::unordered_map<int, bool> keyStates {};
+class KeyboardHook {
+public:
+    static void Register(KeyboardObserver* instance);
+    static void Unregister(KeyboardObserver* instance) noexcept;
+
+private:
+    static LRESULT CALLBACK KeyboardProc(
+        int nCode, WPARAM wParam, LPARAM lParam) noexcept;
+
+    static inline std::mutex mutex {};
+    static inline std::unordered_set<KeyboardObserver*> instances {};
+    static inline std::optional<WinHook> keyboardHook {};
+    static inline std::unordered_map<int, bool> keyHeldStates {};
+};
+} // namespace
+
+void KeyboardHook::Register(KeyboardObserver* instance) try {
+    std::lock_guard lock { mutex };
+    instances.emplace(instance);
+    if (!keyboardHook.has_value()) {
+        keyboardHook.emplace(HookProcedure::WhKeyboardLl, KeyboardProc);
+    }
+} catch (...) {
+    Unregister(instance);
+    throw;
 }
 
+void KeyboardHook::Unregister(KeyboardObserver* instance) noexcept {
+    std::lock_guard lock { mutex };
+    instances.erase(instance);
+    if (instances.empty()) {
+        keyboardHook.reset();
+    }
+}
+
+LRESULT CALLBACK KeyboardHook::KeyboardProc(
+    const int nCode, const WPARAM wParam, const LPARAM lParam) noexcept {
+    const auto hHook = keyboardHook ? keyboardHook->GetHandle() : nullptr;
+    const auto next = [hHook, nCode, wParam, lParam]() noexcept {
+        return CallNextHookEx(hHook, nCode, wParam, lParam);
+    };
+
+    if (nCode != HC_ACTION) {
+        return next();
+    }
+
+    Event event {};
+    const auto keyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+    const auto key = static_cast<int>(keyboard->vkCode);
+    bool* isKeyHeldPtr {};
+    try {
+        isKeyHeldPtr = &keyHeldStates[key];
+    } catch (const std::exception& e) {
+        LOG_E("Failed to get key state: {}", e.what());
+        return next();
+    }
+    auto& isKeyHeld = *isKeyHeldPtr;
+
+    switch (wParam) {
+        case WM_KEYDOWN: case WM_SYSKEYDOWN: {
+            if (isKeyHeld) {
+                event.emplace<OnKeyHold>(key);
+            } else {
+                event.emplace<OnKeyDown>(key);
+            }
+            isKeyHeld = true;
+            break;
+        }
+        case WM_KEYUP: case WM_SYSKEYUP: {
+            event.emplace<OnKeyUp>(key);
+            isKeyHeld = false;
+            break;
+        }
+        default: break;
+    }
+
+    // Notify
+    std::unique_lock lock { mutex };
+    const auto currentWindow = GetForegroundWindow();
+    for (const auto instance : instances) {
+        if (!instance->IsEnabled() ||
+            !instance->GetTargetWindows().contains(currentWindow)) {
+            continue;
+        }
+        if (const auto mediator = instance->GetMediator().lock()) {
+            mediator->Notify(event);
+        }
+    }
+    lock.unlock();
+
+    return next();
+}
+
+namespace {
+struct Visitor {
+    KeyboardObserver& instance;
+
+    void operator()(const OnPluginStart& event) const noexcept;
+    void operator()(const OnPluginEnd& event) const noexcept;
+    template <typename T> void operator()(const T& event) const noexcept;
+};
+} // namespace
+
+void Visitor::operator()(const OnPluginStart& event) const noexcept {
+    instance.SetEnabled(true);
+}
+
+void Visitor::operator()(const OnPluginEnd& event) const noexcept {
+    instance.SetEnabled(false);
+}
+
+template <typename T>
+void Visitor::operator()(const T& event) const noexcept { }
+
 KeyboardObserver::KeyboardObserver(
-    const std::weak_ptr<IMediator<Event>>& mediator,
+    std::weak_ptr<IMediator<Event>> mediator,
     const std::unordered_set<HWND>& targetWindows) try
-    : IComponent { mediator }
+    : IComponent { std::move(mediator) }
     , isEnabled { false }
     , targetWindows { targetWindows } {
-    std::lock_guard lock { mutex };
-    if (keyboardHook == nullptr) {
-        keyboardHook = std::make_unique<WinHook>(
-            HookProcedure::WhKeyboardLl, KeyboardProc
-        );
-    }
-    instances.emplace(this);
+    KeyboardHook::Register(this);
 } catch (const std::exception& e) {
     LOG_E("Failed to create KeyboardObserver: {}", e.what());
     throw;
 }
 
 KeyboardObserver::~KeyboardObserver() noexcept {
-    std::lock_guard lock { mutex };
-    instances.erase(this);
-    if (instances.empty()) {
-        keyboardHook = nullptr;
-    }
+    KeyboardHook::Unregister(this);
 }
 
-void KeyboardObserver::SetEnable(const bool value) noexcept {
+bool KeyboardObserver::IsEnabled() const noexcept {
+    return isEnabled;
+}
+
+const std::unordered_set<HWND>&
+    KeyboardObserver::GetTargetWindows() const noexcept {
+    return targetWindows;
+}
+
+void KeyboardObserver::SetEnabled(const bool value) noexcept {
     isEnabled = value;
 }
 
-LRESULT CALLBACK KeyboardObserver::KeyboardProc(
-    const int nCode, const WPARAM wParam, const LPARAM lParam) noexcept {
-    const auto hHook = keyboardHook ? keyboardHook->GetHandle() : nullptr;
-    if (nCode != HC_ACTION) {
-        return CallNextHookEx(hHook, nCode, wParam, lParam);
-    }
-
-    try {
-        const auto pKeyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
-        const auto vKey = static_cast<int>(pKeyboard->vkCode);
-        Event event {};
-        if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-            if (keyStates[vKey]) {
-                event.emplace<OnKeyHold>(vKey);
-            } else {
-                event.emplace<OnKeyDown>(vKey);
-            }
-            keyStates[vKey] = true;
-        } else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
-            event.emplace<OnKeyUp>(vKey);
-            keyStates[vKey] = false;
-        }
-        Notify(event);
-    } catch (const std::exception& e) {
-        LOG_E("Failed to process keyboard event: {}", e.what());
-    }
-    return CallNextHookEx(hHook, nCode, wParam, lParam);
+void KeyboardObserver::SetTargetWindows(
+    const std::unordered_set<HWND>& windows) noexcept {
+    targetWindows = windows;
 }
 
-void KeyboardObserver::Notify(const Event& event) noexcept try {
-    std::lock_guard lock { mutex };
-    HWND currentWindow = GetForegroundWindow();
-    for (const auto& instance : instances) {
-        if (!instance->isEnabled ||
-            !instance->targetWindows.contains(currentWindow)) {
-            continue;
-        }
-        const auto mediator = instance->weakMediator.lock();
-        if (!mediator) {
-            LOG_E("Mediator is expired");
-            continue;
-        }
-        try {
-            mediator->Notify(event);
-        } catch (const std::exception& e) {
-            LOG_E("Failed to notify instance: {}", e.what());
-        }
-    }
-} catch (const std::exception& e) {
-    LOG_E("Failed to notify instances: {}", e.what());
-}
-
-void KeyboardObserver::Handle(const Event& event) {
+void KeyboardObserver::Handle(const Event& event) noexcept {
     std::visit(Visitor { *this }, event);
-}
-
-template <typename T>
-void KeyboardObserver::Visitor::operator()(const T& event) const { }
-
-template <>
-void KeyboardObserver::Visitor::operator()(const OnPluginStart& event) const try {
-    LOG_D("Handling OnPluginStart event");
-    m.SetEnable(true);
-    LOG_D("OnPluginStart event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnPluginStart event: {}", e.what());
-}
-
-template <>
-void KeyboardObserver::Visitor::operator()(const OnPluginEnd& event) const try {
-    LOG_D("Handling OnPluginEnd event");
-    m.SetEnable(false);
-    LOG_D("OnPluginEnd event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnPluginEnd event: {}", e.what());
 }
