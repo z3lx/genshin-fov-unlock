@@ -9,15 +9,25 @@
 #include <mutex>
 #include <optional>
 #include <thread>
-#include <unordered_set>
+#include <utility>
 #include <variant>
 
 #include <Windows.h>
 
-std::unordered_set<MouseObserver*> MouseObserver::instances {};
-std::mutex MouseObserver::mutex {};
-bool MouseObserver::isPolling { false };
-std::thread MouseObserver::pollingThread {};
+MouseObserver::MouseObserver(
+    std::weak_ptr<IMediator<Event>> mediator) try
+    : IComponent { std::move(mediator) }
+    , isEnabled { false }
+    , isPolling { false } {
+    StartPolling();
+} catch (const std::exception& e) {
+    LOG_E("Failed to create MouseObserver: {}", e.what());
+    throw;
+}
+
+MouseObserver::~MouseObserver() noexcept {
+    StopPolling();
+}
 
 void MouseObserver::StartPolling() {
     std::lock_guard guard { mutex };
@@ -25,16 +35,7 @@ void MouseObserver::StartPolling() {
         return;
     }
     isPolling = true;
-
-    const auto loop = []() {
-        while (isPolling) {
-            Poll();
-            constexpr auto pollingInterval = // 60 hz
-                std::chrono::duration<double, std::milli> { 1000.0 / 60.0 };
-            std::this_thread::sleep_for(pollingInterval);
-        }
-    };
-    pollingThread = std::thread { loop };
+    thread = std::thread { [this] { PollingLoop(); } };
 }
 
 void MouseObserver::StopPolling() noexcept {
@@ -43,93 +44,72 @@ void MouseObserver::StopPolling() noexcept {
         return;
     }
     isPolling = false;
+    thread.join();
+}
 
-    if (pollingThread.joinable()) {
-        pollingThread.join();
+void MouseObserver::PollingLoop() noexcept {
+    const auto poll = [this]() noexcept {
+        std::lock_guard guard { mutex };
+
+        if (!isEnabled) {
+            isPreviousCursorVisible.reset();
+            return;
+        }
+
+        CURSORINFO cursorinfo { .cbSize = sizeof(cursorinfo) };
+        if (!GetCursorInfo(&cursorinfo)) {
+            return;
+        }
+        const bool isCurrentCursorVisible =
+            (cursorinfo.flags & CURSOR_SHOWING) != 0;
+
+        if (isPreviousCursorVisible != isCurrentCursorVisible) {
+            isPreviousCursorVisible = isCurrentCursorVisible;
+            Notify(OnCursorVisibilityChange { isCurrentCursorVisible });
+        }
+    };
+
+    while (isPolling) {
+        poll();
+        constexpr auto pollingInterval = // 60 hz
+            std::chrono::duration<double, std::milli> { 1000.0 / 60.0 };
+        std::this_thread::sleep_for(pollingInterval);
     }
 }
 
-// Will only notify if the cursor visibility changes
-// Unfocusing a window is will interpret as the cursor being shown
-// Will always notify the first time an instance is added
-void MouseObserver::Poll() noexcept {
-    CURSORINFO cursorinfo { .cbSize = sizeof(cursorinfo) };
-    bool isCursorVisible {};
-    if (GetCursorInfo(&cursorinfo)) {
-        isCursorVisible = (cursorinfo.flags & CURSOR_SHOWING) != 0;
-    } else {
-        LOG_E("Failed to get cursor info");
-    }
-    HWND currentWindow = GetForegroundWindow();
-
-    for (const auto& instance : instances) {
-        if (!instance->isEnabled) {
-            continue;
-        }
-
-        const auto isCurrentCursorVisible = isCursorVisible ||
-            !instance->targetWindows.contains(currentWindow);
-        auto& isPreviousCursorVisible = instance->isCursorVisible;
-        if (isCurrentCursorVisible == isPreviousCursorVisible) {
-            continue;
-        }
-        isPreviousCursorVisible = isCurrentCursorVisible;
-
-        const auto mediator = instance->weakMediator.lock();
-        if (!mediator) {
-            LOG_E("Mediator is expired");
-            continue;
-        }
-        try {
-            mediator->Notify(OnCursorVisibilityChange {
-                isCurrentCursorVisible
-            });
-        } catch (const std::exception& e) {
-            LOG_E("Failed to process mouse event: {}", e.what());
-        }
-    }
+bool MouseObserver::IsEnabled() const noexcept {
+    return isEnabled;
 }
 
-MouseObserver::MouseObserver(
-    const std::weak_ptr<IMediator<Event>>& mediator,
-    const std::unordered_set<HWND>& targetWindows) try
-    : IComponent { mediator }
-    , isEnabled { false }
-    , targetWindows { targetWindows } {
-    // TODO: Add synchronization, handle exceptions
-    instances.emplace(this);
-    if (instances.size() == 1) {
-        StartPolling();
-    }
-} catch (const std::exception& e) {
-    LOG_E("Failed to create MouseObserver: {}", e.what());
-    throw;
+std::optional<bool> MouseObserver::IsCursorVisible() const noexcept {
+    return isPreviousCursorVisible;
 }
 
-MouseObserver::~MouseObserver() noexcept {
-    if (instances.size() == 1) {
-        StopPolling();
-    }
-    instances.erase(this);
-}
-
-void MouseObserver::SetEnable(const bool value) noexcept {
+void MouseObserver::SetEnabled(const bool value) noexcept {
     isEnabled = value;
 }
 
-void MouseObserver::Handle(const Event& event) {
+namespace {
+struct Visitor {
+    MouseObserver& instance;
+
+    void operator()(const OnPluginStart&) const noexcept;
+    void operator()(const OnPluginEnd&) const noexcept;
+    template <typename T> void operator()(const T&) const noexcept;
+};
+} // namespace
+
+void MouseObserver::Handle(const Event& event) noexcept {
     std::visit(Visitor { *this }, event);
 }
 
+void Visitor::operator()(const OnPluginStart& event) const noexcept {
+    instance.SetEnabled(true);
+}
+
+void Visitor::operator()(const OnPluginEnd& event) const noexcept {
+    instance.SetEnabled(false);
+}
+
 template <typename T>
-void MouseObserver::Visitor::operator()(const T&) const { }
-
-template <>
-void MouseObserver::Visitor::operator()(const OnPluginStart&) const {
-    m.SetEnable(true);
-}
-
-template <>
-void MouseObserver::Visitor::operator()(const OnPluginEnd&) const {
-    m.SetEnable(false);
-}
+void Visitor::operator()(const T&) const noexcept {}
