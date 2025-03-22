@@ -2,6 +2,8 @@
 
 #include <variant>
 
+#include <Windows.h>
+
 struct OnPluginStart {
 };
 
@@ -43,6 +45,10 @@ struct OnCursorVisibilityChange {
     const bool isCursorVisible;
 };
 
+struct OnForegroundWindowChange {
+    const HWND hwnd;
+};
+
 using Event = std::variant<
     OnPluginStart,
     OnPluginEnd,
@@ -54,5 +60,6 @@ using Event = std::variant<
     OnKeyDown,
     OnKeyHold,
     OnKeyUp,
-    OnCursorVisibilityChange
+    OnCursorVisibilityChange,
+    OnForegroundWindowChange
 >;
