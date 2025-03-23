@@ -12,7 +12,9 @@
 #include <fstream>
 #include <memory>
 #include <ranges>
+#include <utility>
 
+namespace {
 constexpr auto ENABLED = "enabled";
 constexpr auto FOV = "fov";
 constexpr auto FOV_PRESETS = "fov_presets";
@@ -21,11 +23,13 @@ constexpr auto ENABLE_KEY = "enable_key";
 constexpr auto NEXT_KEY = "next_key";
 constexpr auto PREV_KEY = "prev_key";
 constexpr auto DUMP_KEY = "dump_key";
+} // namespace
 
 ConfigManager::ConfigManager(
-    const std::weak_ptr<IMediator<Event>>& mediator,
-    const std::filesystem::path& filePath) noexcept
-    : IComponent(mediator), filePath(filePath) { }
+    std::weak_ptr<IMediator<Event>> mediator,
+    std::filesystem::path filePath) noexcept
+    : IComponent { std::move(mediator) }
+    , filePath { std::move(filePath) } {}
 
 ConfigManager::~ConfigManager() noexcept = default;
 
@@ -53,7 +57,7 @@ ConfigManager::~ConfigManager() noexcept = default;
 
 void ConfigManager::Load() try {
     LOG_D("Loading config from {}", filePath.string());
-    const auto mediator = weakMediator.lock();
+    const auto mediator = GetMediator().lock();
     if (!mediator) {
         LOG_E("Mediator is expired");
         return;
@@ -125,7 +129,7 @@ void ConfigManager::Save() try {
 
     std::ofstream file { filePath };
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file");
+        throw std::runtime_error { "Failed to open file" };
     }
     file << j.dump(4);
     LOG_I("Config saved");
@@ -134,39 +138,45 @@ void ConfigManager::Save() try {
     throw;
 }
 
-void ConfigManager::Handle(const Event& event) {
+namespace {
+struct Visitor {
+    ConfigManager& instance;
+
+    void operator()(const OnPluginStart& event) const;
+    void operator()(const OnPluginEnd& event) const;
+    void operator()(const OnKeyDown& event) const;
+    void operator()(const OnCursorVisibilityChange& event) const;
+    template <typename T> void operator()(const T& event) const;
+};
+} // namespace
+
+void ConfigManager::Handle(const Event& event) noexcept {
    std::visit(Visitor { *this }, event);
 }
 
-template <typename T>
-void ConfigManager::Visitor::operator()(const T& event) const { }
-
-template <>
-void ConfigManager::Visitor::operator()(const OnPluginStart& event) const try {
-    m.Load();
+void Visitor::operator()(const OnPluginStart& event) const try {
+    instance.Load();
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnPluginStart event: {}", e.what());
 }
 
-template <>
-void ConfigManager::Visitor::operator()(const OnPluginEnd& event) const try {
-    m.Save();
+void Visitor::operator()(const OnPluginEnd& event) const try {
+    instance.Save();
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnPluginEnd event: {}", e.what());
 }
 
-template <>
-void ConfigManager::Visitor::operator()(const OnKeyDown& event) const try {
-    const auto mediator = m.weakMediator.lock();
+void Visitor::operator()(const OnKeyDown& event) const try {
+    const auto mediator = instance.GetMediator().lock();
     if (!mediator) {
         LOG_E("Mediator is expired");
         return;
     }
 
     auto& [enabled, fov, fovPresets, smoothing,
-        enableKey, nextKey, prevKey, dumpKey] = m.config;
+        enableKey, nextKey, prevKey, dumpKey] = instance.config;
 
-    if (!m.hooked) { // TODO: Refactor
+    if (!instance.hooked) { // TODO: Refactor
         return;
     }
 
@@ -199,13 +209,15 @@ void ConfigManager::Visitor::operator()(const OnKeyDown& event) const try {
     LOG_E("Failed to handle OnKeyDown event: {}", e.what());
 }
 
-template <>
-void ConfigManager::Visitor::operator()(const OnCursorVisibilityChange& event) const try {
+void Visitor::operator()(const OnCursorVisibilityChange& event) const try {
     // TODO: Synchronize
-    m.hooked = !event.isCursorVisible;
-    if (const auto mediator = m.weakMediator.lock()) {
-        mediator->Notify(OnHookToggle { m.hooked });
+    instance.hooked = !event.isCursorVisible;
+    if (const auto mediator = instance.GetMediator().lock()) {
+        mediator->Notify(OnHookToggle { instance.hooked });
     }
 } catch (const std::exception& e) {
     LOG_E("Failed to handle OnCursorVisibilityChange event: {}", e.what());
 }
+
+template <typename T>
+void Visitor::operator()(const T& event) const {}
