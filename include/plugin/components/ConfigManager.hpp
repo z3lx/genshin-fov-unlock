@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include <Windows.h>
+
 struct Config {
     bool enabled = true;
     int fov = 75;
@@ -29,14 +31,10 @@ public:
         std::filesystem::path filePath = "fov_config.json") noexcept;
     ~ConfigManager() noexcept override;
 
-    void Load();
-    void Save();
+    // TODO: Add file watcher
+    [[nodiscard]] Config Read() const;
+    void Write(const Config& config) const;
 
-    void Handle(const Event& event) noexcept override;
-
-    // TODO: Refactor
-    Config config;
-    bool hooked = false;
 private:
     std::filesystem::path filePath;
 };

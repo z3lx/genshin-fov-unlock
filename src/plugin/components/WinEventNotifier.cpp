@@ -114,27 +114,6 @@ void WinEventHook::ClearHook(std::thread& thread) noexcept {
     hWinEventHook = nullptr;
 }
 
-namespace {
-struct Visitor {
-    WinEventNotifier& instance;
-
-    void operator()(const OnPluginStart& event) const noexcept;
-    void operator()(const OnPluginEnd& event) const noexcept;
-    template <typename T> void operator()(const T& event) const noexcept;
-};
-} // namespace
-
-void Visitor::operator()(const OnPluginStart& event) const noexcept {
-    instance.SetEnabled(true);
-}
-
-void Visitor::operator()(const OnPluginEnd& event) const noexcept {
-    instance.SetEnabled(false);
-}
-
-template <typename T>
-void Visitor::operator()(const T& event) const noexcept {}
-
 WinEventNotifier::WinEventNotifier(
     std::weak_ptr<IMediator<Event>> mediator) try
     : IComponent { std::move(mediator) }
@@ -155,8 +134,4 @@ bool WinEventNotifier::IsEnabled() const noexcept {
 
 void WinEventNotifier::SetEnabled(const bool value) noexcept {
     isEnabled = value;
-}
-
-void WinEventNotifier::Handle(const Event& event) noexcept {
-    std::visit(Visitor { *this }, event);
 }

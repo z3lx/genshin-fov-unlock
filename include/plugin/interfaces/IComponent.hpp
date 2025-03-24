@@ -14,8 +14,6 @@ public:
     IComponent() noexcept = default;
     virtual ~IComponent() noexcept = default;
 
-    virtual void Handle(const Event& event) noexcept = 0;
-
     [[nodiscard]] MediatorPtr GetMediator() const noexcept;
     void SetMediator(MediatorPtr mediator) noexcept;
 

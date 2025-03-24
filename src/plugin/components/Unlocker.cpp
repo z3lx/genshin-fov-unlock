@@ -19,6 +19,7 @@
 #include <queue>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <variant>
 
 #include <Windows.h>
@@ -41,8 +42,8 @@ void* Unlocker::previousInstance = nullptr;
 float Unlocker::previousFov = 45.0f;
 bool Unlocker::isPreviousFov = false;
 
-Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
-    : IComponent(mediator) {
+Unlocker::Unlocker(std::weak_ptr<IMediator<Event>> mediator) try
+    : IComponent { std::move(mediator) } {
     std::lock_guard lock { mutex };
 
     auto module = reinterpret_cast<uintptr_t>(GetModuleHandle("GenshinImpact.exe"));
@@ -86,7 +87,7 @@ void Unlocker::SetHook(const bool value) const {
     }
 }
 
-void Unlocker::SetEnable(const bool value) const {
+void Unlocker::SetEnable(const bool value) const noexcept {
     isEnabled = value;
 }
 
@@ -142,58 +143,6 @@ void Unlocker::HkSetFieldOfView(void* instance, float value) noexcept {
     } catch (const std::exception& e) {
         LOG_E("Failed to set field of view: {}", e.what());
     }
-}
-
-void Unlocker::Handle(const Event& event) {
-    std::visit(Visitor { *this }, event);
-}
-
-template <typename T>
-void Unlocker::Visitor::operator()(const T& event) const { }
-
-template <>
-void Unlocker::Visitor::operator()(const OnHookToggle& event) const try {
-    LOG_D("Handling OnHookToggle event with hooked = {}", event.hooked);
-    m.SetHook(event.hooked);
-    LOG_D("OnHookToggle event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnHookToggle event: {}", e.what());
-}
-
-template <>
-void Unlocker::Visitor::operator()(const OnEnableToggle& event) const try {
-    LOG_D("Handling OnEnableToggle event with enabled = {}", event.enabled);
-    m.SetEnable(event.enabled);
-    LOG_D("OnEnableToggle event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnEnableToggle event: {}", e.what());
-}
-
-template <>
-void Unlocker::Visitor::operator()(const OnFovChange& event) const try {
-    LOG_D("Handling OnFovChange event with fov = {}", event.fov);
-    m.SetFieldOfView(event.fov);
-    LOG_D("OnFovChange event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnFovChange event: {}", e.what());
-}
-
-template <>
-void Unlocker::Visitor::operator()(const OnSmoothingChange& event) const try {
-    LOG_D("Handling OnSmoothingChange event with smoothing = {}", event.smoothing);
-    m.SetSmoothing(static_cast<float>(event.smoothing));
-    LOG_D("OnSmoothingChange event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnSmoothingChange event: {}", e.what());
-}
-
-template<>
-void Unlocker::Visitor::operator()(const OnDumpBuffer& event) const try {
-    LOG_D("Handling OnDumpBuffer event");
-    LOG_D(DumpBuffer());
-    LOG_D("OnDumpBuffer event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnDumpBuffer event: {}", e.what());
 }
 
 namespace sc = std::chrono;

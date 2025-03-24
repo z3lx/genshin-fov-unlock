@@ -6,6 +6,7 @@
 #include "utils/Windows.hpp"
 #include "utils/log/Logger.hpp"
 
+#include <algorithm>
 #include <exception>
 #include <memory>
 #include <mutex>
@@ -147,27 +148,6 @@ void KeyboardHook::ClearHook(std::thread& thread) noexcept {
     hHook = nullptr;
 }
 
-namespace {
-struct Visitor {
-    KeyboardObserver& instance;
-
-    void operator()(const OnPluginStart& event) const noexcept;
-    void operator()(const OnPluginEnd& event) const noexcept;
-    template <typename T> void operator()(const T& event) const noexcept;
-};
-} // namespace
-
-void Visitor::operator()(const OnPluginStart& event) const noexcept {
-    instance.SetEnabled(true);
-}
-
-void Visitor::operator()(const OnPluginEnd& event) const noexcept {
-    instance.SetEnabled(false);
-}
-
-template <typename T>
-void Visitor::operator()(const T& event) const noexcept { }
-
 KeyboardObserver::KeyboardObserver(
     std::weak_ptr<IMediator<Event>> mediator) try
     : IComponent { std::move(mediator) }
@@ -188,8 +168,4 @@ bool KeyboardObserver::IsEnabled() const noexcept {
 
 void KeyboardObserver::SetEnabled(const bool value) noexcept {
     isEnabled = value;
-}
-
-void KeyboardObserver::Handle(const Event& event) noexcept {
-    std::visit(Visitor { *this }, event);
 }

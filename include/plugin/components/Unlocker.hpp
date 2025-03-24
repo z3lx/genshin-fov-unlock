@@ -16,24 +16,15 @@
 
 class Unlocker final : public IComponent<Event> {
 public:
-    explicit Unlocker(const std::weak_ptr<IMediator<Event>>& mediator);
+    explicit Unlocker(std::weak_ptr<IMediator<Event>> mediator);
     ~Unlocker() noexcept override;
 
     void SetHook(bool value) const;
-    void SetEnable(bool value) const;
+    void SetEnable(bool value) const noexcept;
     void SetFieldOfView(int value) noexcept;
     void SetSmoothing(float value) noexcept;
 
-    void Handle(const Event& event) override;
-
 private:
-    struct Visitor {
-        Unlocker& m;
-
-        template <typename T>
-        void operator()(const T& event) const;
-    };
-
     static void HkSetFieldOfView(void* instance, float value) noexcept;
 
     static std::mutex mutex;

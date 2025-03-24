@@ -14,8 +14,6 @@ public:
     [[nodiscard]] bool IsEnabled() const noexcept;
     void SetEnabled(bool value) noexcept;
 
-    void Handle(const Event& event) noexcept override;
-
 private:
     bool isEnabled;
 };

@@ -88,28 +88,3 @@ std::optional<bool> MouseObserver::IsCursorVisible() const noexcept {
 void MouseObserver::SetEnabled(const bool value) noexcept {
     isEnabled = value;
 }
-
-namespace {
-struct Visitor {
-    MouseObserver& instance;
-
-    void operator()(const OnPluginStart&) const noexcept;
-    void operator()(const OnPluginEnd&) const noexcept;
-    template <typename T> void operator()(const T&) const noexcept;
-};
-} // namespace
-
-void MouseObserver::Handle(const Event& event) noexcept {
-    std::visit(Visitor { *this }, event);
-}
-
-void Visitor::operator()(const OnPluginStart& event) const noexcept {
-    instance.SetEnabled(true);
-}
-
-void Visitor::operator()(const OnPluginEnd& event) const noexcept {
-    instance.SetEnabled(false);
-}
-
-template <typename T>
-void Visitor::operator()(const T&) const noexcept {}
