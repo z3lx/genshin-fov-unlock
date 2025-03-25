@@ -16,9 +16,7 @@
 
 class Plugin final : public IMediator<Event> {
 public:
-    static void Initialize();
-    static void Uninitialize();
-
+    static std::shared_ptr<Plugin> MakePlugin();
     ~Plugin() override;
 
     void Notify(const Event& event) noexcept override;

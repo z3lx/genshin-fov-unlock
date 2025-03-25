@@ -5,13 +5,11 @@
 #include "plugin/components/MouseObserver.hpp"
 #include "plugin/components/Unlocker.hpp"
 #include "plugin/components/WinEventNotifier.hpp"
+#include "utils/Windows.hpp"
 #include "utils/log/Logger.hpp"
-#include "utils/log/sinks/FileSink.hpp"
 
 #include <chrono>
 #include <exception>
-#include <filesystem>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <ranges>
@@ -22,112 +20,30 @@
 
 #include <Windows.h>
 
-namespace fs = std::filesystem;
-
-namespace {
-void AllocateConsole() noexcept {
-    if (!AllocConsole()) {
-        return;
-    }
-    FILE* file {};
-    freopen_s(&file, "CONOUT$", "w", stdout);
-    freopen_s(&file, "CONOUT$", "w", stderr);
-    freopen_s(&file, "CONIN$", "r", stdin);
-    std::cout.clear();
-    std::cerr.clear();
-    std::cin.clear();
-    std::wcout.clear();
-    std::wcerr.clear();
-    std::wcin.clear();
-}
-
-fs::path GetPath() {
-    static fs::path path {};
-    if (!path.empty()) {
-        return path;
-    }
-
-    HMODULE module {};
-    GetModuleHandleEx(
-        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        static_cast<LPCTSTR>(reinterpret_cast<void*>(GetPath)),
-        &module
-    );
-
-    char buffer[MAX_PATH];
-    GetModuleFileName(module, buffer, MAX_PATH);
-    path = fs::path { buffer }.parent_path();
-    return path;
-}
-
-std::vector<HWND> GetWindows() {
-    DWORD targetProcessId = GetCurrentProcessId();
-    std::vector<HWND> targetWindows {};
-    std::tuple params = std::tie(targetProcessId, targetWindows);
-
-    const auto callback = [](HWND hwnd, LPARAM lParam) -> BOOL {
-        auto& [targetProcessId, targetWindows] = *reinterpret_cast<
-            std::tuple<DWORD&, std::vector<HWND>&>*>(lParam);
-
-        DWORD processId;
-        GetWindowThreadProcessId(hwnd, &processId);
-        if (processId == targetProcessId &&
-            !std::ranges::contains(targetWindows, hwnd)) {
-            targetWindows.push_back(hwnd);
-        }
-        return TRUE;
-    };
-
-    while (targetWindows.empty()) {
-        EnumWindows(callback, reinterpret_cast<LPARAM>(&params));
-        std::this_thread::sleep_for(std::chrono::seconds { 1 });
-    }
-    return targetWindows;
-}
-
-std::shared_ptr<Plugin> plugin = nullptr;
-} // namespace
-
-void Plugin::Initialize() try {
-    if (plugin) {
-        return;
-    }
-
-    LOG_SET_LEVEL(Level::Trace);
-    LOG_SET_SINKS(std::make_unique<FileSink>(GetPath() / "logs.txt", true));
-    LOG_D("Working directory: {}", GetPath().string());
-
-    plugin = std::shared_ptr<Plugin>(new Plugin {});
-    auto path = GetPath() / "fov_config.json";
+std::shared_ptr<Plugin> Plugin::MakePlugin() {
+    auto plugin = std::shared_ptr<Plugin>(new Plugin {});
     plugin->keyboardObserver = std::make_unique<KeyboardObserver>(plugin);
     plugin->mouseObserver = std::make_unique<MouseObserver>(plugin);
     plugin->winEventNotifier = std::make_unique<WinEventNotifier>(plugin);
-    plugin->configManager = std::make_unique<ConfigManager>(plugin, path);
+    plugin->configManager = std::make_unique<ConfigManager>(
+        plugin, GetModulePath().parent_path() / "fov_config.json");
     plugin->unlocker = std::make_unique<Unlocker>(plugin);
 
-    plugin->targetWindows = GetWindows();
+    plugin->targetWindows = GetProcessWindows();
     plugin->Notify(OnPluginStart {});
-} catch (const std::exception& e) {
-    LOG_F("Failed to initialize plugin: {}", e.what());
-    Uninitialize();
-}
-
-void Plugin::Uninitialize() try {
-    if (plugin) {
-        plugin->Notify(OnPluginEnd {});
-        plugin = nullptr;
-    }
-} catch (const std::exception& e) {
-    LOG_F("Failed to uninitialize plugin: {}", e.what());
+    return plugin;
 }
 
 Plugin::Plugin()
     : isUnlockerHooked { false }
     , isWindowFocused { true }
-    , isCursorVisible { true } {};
+    , isCursorVisible { true } {
+    // Construction delegated to MakePlugin
+};
 
-Plugin::~Plugin() = default;
+Plugin::~Plugin() {
+    Notify(OnPluginEnd {});
+}
 
 template <>
 void Plugin::Handle(const OnPluginStart& event) noexcept {

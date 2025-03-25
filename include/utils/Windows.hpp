@@ -1,6 +1,8 @@
 #pragma once
 
+#include <filesystem>
 #include <system_error>
+#include <vector>
 
 #include <Windows.h>
 
@@ -14,3 +16,7 @@ void ThrowOnSystemError(T&& condition) {
         std::system_category()
     };
 }
+
+void AllocateConsole();
+std::filesystem::path GetModulePath(const void* address = nullptr);
+std::vector<HWND> GetProcessWindows(DWORD processId = 0);
