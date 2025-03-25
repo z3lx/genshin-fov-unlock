@@ -1,6 +1,3 @@
-// ReSharper disable CppMemberFunctionMayBeStatic
-// NOLINTBEGIN(*-convert-member-functions-to-static)
-
 #include "plugin/components/Unlocker.hpp"
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IMediator.hpp"
@@ -19,44 +16,54 @@
 #include <queue>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <variant>
 
 #include <Windows.h>
 
+namespace {
 constexpr auto OFFSET_GL = 0xEB6BE0;
 constexpr auto OFFSET_CN = 0xEB8BD0;
 
-// TODO: Refactor unlocker, it's a mess T^T
+void HkSetFieldOfView(void* instance, float value) noexcept;
+void AddToBuffer(void* instance, float value);
+std::string DumpBuffer();
 
-std::mutex Unlocker::mutex {};
-std::unique_ptr<MinHook<void, void*, float>> Unlocker::hook = nullptr;
-ExponentialFilter<float> Unlocker::filter {};
+std::mutex mutex {};
+std::optional<MinHook<void, void*, float>> hook {};
+ExponentialFilter<float> filter {};
 
-bool Unlocker::isHooked = false;
-bool Unlocker::isEnabled = false;
-int Unlocker::overrideFov = 45;
+bool isHooked = false;
+bool isEnabled = false;
+bool isEnabledOnce = false;
+int overrideFov = 45;
 
-int Unlocker::setFovCount = 0;
-void* Unlocker::previousInstance = nullptr;
-float Unlocker::previousFov = 45.0f;
-bool Unlocker::isPreviousFov = false;
+int setFovCount = 0;
+void* previousInstance = nullptr;
+float previousFov = 45.0f;
+bool isPreviousFov = false;
+} // namespace
 
-Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
-    : IComponent(mediator) {
+Unlocker::Unlocker(std::weak_ptr<IMediator<Event>> mediator) try
+    : IComponent { std::move(mediator) } {
     std::lock_guard lock { mutex };
 
-    auto module = reinterpret_cast<uintptr_t>(GetModuleHandle("GenshinImpact.exe"));
-    const auto global = module ? true :
-        (module = reinterpret_cast<uintptr_t>(GetModuleHandle("YuanShen.exe")), false);
+    auto module = reinterpret_cast<uintptr_t>(
+        GetModuleHandle("GenshinImpact.exe"));
+    const auto global = module ? true : (
+        module = reinterpret_cast<uintptr_t>(
+        GetModuleHandle("YuanShen.exe")), false);
     if (!module) {
-        throw std::runtime_error("Failed to get module handle due to unknown game");
+        throw std::runtime_error {
+            "Failed to get module handle due to unknown game"
+        };
     }
     const auto offset = global ? OFFSET_GL : OFFSET_CN;
     const auto target = reinterpret_cast<void*>(module + offset);
     const auto detour = reinterpret_cast<void*>(HkSetFieldOfView);
 
     if (!hook) {
-        hook = std::make_unique<MinHook<void, void*, float>>();
+        hook.emplace();
     }
     hook->Create(target, detour);
 } catch (const std::exception& e) {
@@ -65,28 +72,22 @@ Unlocker::Unlocker(const std::weak_ptr<IMediator<Event>>& mediator) try
 }
 
 Unlocker::~Unlocker() noexcept {
-    try {
-        std::lock_guard lock { mutex };
-        hook->Remove();
-        hook = nullptr;
-    } catch (const std::exception& e) {
-        LOG_E("Failed to destroy Unlocker: {}", e.what());
-    }
+    std::lock_guard lock { mutex };
+    hook.reset();
 }
 
-bool justEnabled = false;
 void Unlocker::SetHook(const bool value) const {
     std::lock_guard lock { mutex };
     isHooked = value;
     if (value) {
         hook->Enable();
-        justEnabled = true;
+        isEnabledOnce = true;
     } else {
         // hook->Disable();
     }
 }
 
-void Unlocker::SetEnable(const bool value) const {
+void Unlocker::SetEnable(const bool value) const noexcept {
     isEnabled = value;
 }
 
@@ -98,111 +99,62 @@ void Unlocker::SetSmoothing(const float value) noexcept {
     filter.SetTimeConstant(value);
 }
 
-void Unlocker::HkSetFieldOfView(void* instance, float value) noexcept {
+namespace {
+void HkSetFieldOfView(void* instance, float value) noexcept try {
     std::lock_guard lock { mutex };
-    try {
-        ++setFovCount;
-        if (const bool isDefaultFov = value == 45.0f;
-            instance == previousInstance &&
-            (value == previousFov || isDefaultFov)) {
-            if (isDefaultFov) {
-                previousInstance = instance;
-                previousFov = value;
-            }
 
-            if (setFovCount > 8) {
-                filter.SetInitialValue(value);
-            }
-            setFovCount = 0;
-
-            if (justEnabled) {
-                justEnabled = false;
-                filter.Update(value);
-            }
-            const float target = (isHooked && isEnabled) ?
-                static_cast<float>(overrideFov) : previousFov;
-            const float filtered = filter.Update(target);
-
-            if ((isHooked && isEnabled) || !isPreviousFov) {
-                isPreviousFov = std::abs(previousFov - filtered) < 0.1f;
-                value = filtered;
-            } else if (!isHooked) {
-                isPreviousFov = false;
-                hook->Disable();
-            }
-        } else {
-            const auto rep = std::bit_cast<std::uint32_t>(value);
-            value = std::bit_cast<float>(rep + 1); // marker value
+    ++setFovCount;
+    if (const bool isDefaultFov = value == 45.0f;
+        instance == previousInstance &&
+        (value == previousFov || isDefaultFov)) {
+        if (isDefaultFov) {
             previousInstance = instance;
             previousFov = value;
         }
 
-        AddToBuffer(instance, value);
-        hook->CallOriginal(instance, value);
-    } catch (const std::exception& e) {
-        LOG_E("Failed to set field of view: {}", e.what());
+        if (setFovCount > 8) {
+            filter.SetInitialValue(value);
+        }
+        setFovCount = 0;
+
+        if (isEnabledOnce) {
+            isEnabledOnce = false;
+            filter.Update(value);
+        }
+        const float target = (isHooked && isEnabled) ?
+            static_cast<float>(overrideFov) : previousFov;
+        const float filtered = filter.Update(target);
+
+        if ((isHooked && isEnabled) || !isPreviousFov) {
+            isPreviousFov = std::abs(previousFov - filtered) < 0.1f;
+            value = filtered;
+        } else if (!isHooked) {
+            isPreviousFov = false;
+            hook->Disable();
+        }
+    } else {
+        const auto rep = std::bit_cast<std::uint32_t>(value);
+        value = std::bit_cast<float>(rep + 1); // marker value
+        previousInstance = instance;
+        previousFov = value;
     }
-}
 
-void Unlocker::Handle(const Event& event) {
-    std::visit(Visitor { *this }, event);
-}
-
-template <typename T>
-void Unlocker::Visitor::operator()(const T& event) const { }
-
-template <>
-void Unlocker::Visitor::operator()(const OnHookToggle& event) const try {
-    LOG_D("Handling OnHookToggle event with hooked = {}", event.hooked);
-    m.SetHook(event.hooked);
-    LOG_D("OnHookToggle event handled");
+    // AddToBuffer(instance, value);
+    hook->CallOriginal(instance, value);
 } catch (const std::exception& e) {
-    LOG_E("Failed to handle OnHookToggle event: {}", e.what());
+    LOG_E("Failed to hook set field of view: {}", e.what());
 }
+} // namespace
 
-template <>
-void Unlocker::Visitor::operator()(const OnEnableToggle& event) const try {
-    LOG_D("Handling OnEnableToggle event with enabled = {}", event.enabled);
-    m.SetEnable(event.enabled);
-    LOG_D("OnEnableToggle event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnEnableToggle event: {}", e.what());
-}
-
-template <>
-void Unlocker::Visitor::operator()(const OnFovChange& event) const try {
-    LOG_D("Handling OnFovChange event with fov = {}", event.fov);
-    m.SetFieldOfView(event.fov);
-    LOG_D("OnFovChange event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnFovChange event: {}", e.what());
-}
-
-template <>
-void Unlocker::Visitor::operator()(const OnSmoothingChange& event) const try {
-    LOG_D("Handling OnSmoothingChange event with smoothing = {}", event.smoothing);
-    m.SetSmoothing(static_cast<float>(event.smoothing));
-    LOG_D("OnSmoothingChange event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnSmoothingChange event: {}", e.what());
-}
-
-template<>
-void Unlocker::Visitor::operator()(const OnDumpBuffer& event) const try {
-    LOG_D("Handling OnDumpBuffer event");
-    LOG_D(DumpBuffer());
-    LOG_D("OnDumpBuffer event handled");
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnDumpBuffer event: {}", e.what());
-}
-
+#if false // TODO: Reimplement
+namespace {
 namespace sc = std::chrono;
 
 std::queue<std::tuple<
     sc::steady_clock::time_point, uintptr_t, float>
-> Unlocker::buffer {};
+> buffer {};
 
-void Unlocker::AddToBuffer(void* instance, const float value) {
+void AddToBuffer(void* instance, const float value) {
     const auto now = sc::steady_clock::now();
     while (!buffer.empty()) {
         const auto [time, instance, value] = buffer.front();
@@ -215,7 +167,7 @@ void Unlocker::AddToBuffer(void* instance, const float value) {
     buffer.emplace(now, reinterpret_cast<uintptr_t>(instance), value);
 }
 
-std::string Unlocker::DumpBuffer() {
+std::string DumpBuffer() {
     using namespace nlohmann;
 
     std::lock_guard lock { mutex };
@@ -237,5 +189,5 @@ std::string Unlocker::DumpBuffer() {
     }
     return j.dump();
 }
-
-// NOLINTEND(*-convert-member-functions-to-static)
+} // namespace
+#endif

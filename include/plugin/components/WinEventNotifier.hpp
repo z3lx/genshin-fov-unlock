@@ -6,10 +6,10 @@
 
 #include <memory>
 
-class KeyboardObserver final : public IComponent<Event> {
+class WinEventNotifier final : public IComponent<Event> {
 public:
-    explicit KeyboardObserver(std::weak_ptr<IMediator<Event>> mediator);
-    ~KeyboardObserver() noexcept override;
+    explicit WinEventNotifier(std::weak_ptr<IMediator<Event>> mediator);
+    ~WinEventNotifier() noexcept override;
 
     [[nodiscard]] bool IsEnabled() const noexcept;
     void SetEnabled(bool value) noexcept;

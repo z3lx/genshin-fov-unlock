@@ -3,46 +3,30 @@
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IComponent.hpp"
 #include "plugin/interfaces/IMediator.hpp"
-#include "utils/VehHook.hpp"
 
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
-#include <unordered_set>
 
 class MouseObserver final : public IComponent<Event> {
 public:
-    explicit MouseObserver(
-        const std::weak_ptr<IMediator<Event>>& mediator,
-        const std::unordered_set<HWND>& targetWindows
-    );
+    explicit MouseObserver(std::weak_ptr<IMediator<Event>> mediator);
     ~MouseObserver() noexcept override;
 
-    void SetEnable(bool value) noexcept;
-
-    void Handle(const Event& event) override;
+    [[nodiscard]] bool IsEnabled() const noexcept;
+    [[nodiscard]] std::optional<bool> IsCursorVisible() const noexcept;
+    void SetEnabled(bool value) noexcept;
 
 private:
+    void StartPolling();
+    void StopPolling() noexcept;
+    void PollingLoop() noexcept;
+
     bool isEnabled;
-    std::optional<bool> isCursorVisible;
-    std::unordered_set<HWND> targetWindows;
+    bool isPolling;
+    std::optional<bool> isPreviousCursorVisible;
 
-    struct Visitor;
-
-    static std::unordered_set<MouseObserver*> instances;
-    static std::mutex mutex;
-
-    static void StartPolling();
-    static void StopPolling() noexcept;
-    static void Poll() noexcept;
-    static bool isPolling;
-    static std::thread pollingThread;
-};
-
-struct MouseObserver::Visitor {
-    MouseObserver& m;
-
-    template <typename T>
-    void operator()(const T& event) const;
+    std::mutex mutex;
+    std::thread thread;
 };

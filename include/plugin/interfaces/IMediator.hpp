@@ -1,35 +1,10 @@
 #pragma once
 
-#include "plugin/interfaces/IComponent.hpp"
-
-#include <memory>
-#include <vector>
-
-template <typename T>
+template <typename Event>
 class IMediator {
 public:
-    IMediator() = default;
-    virtual ~IMediator() = default;
+    IMediator() noexcept = default;
+    virtual ~IMediator() noexcept = default;
 
-    void Notify(const T& event);
-
-protected:
-    template <typename... Args>
-    void AddComponents(Args&&... args);
-
-private:
-    std::vector<std::unique_ptr<IComponent<T>>> components;
+    virtual void Notify(const Event& event) noexcept = 0;
 };
-
-template <typename T>
-void IMediator<T>::Notify(const T& event) {
-    for (const auto& component : components) {
-        component->Handle(event);
-    }
-}
-
-template <typename T>
-template <typename... Args>
-void IMediator<T>::AddComponents(Args&&... args) {
-    (components.push_back(std::forward<Args>(args)), ...);
-}
