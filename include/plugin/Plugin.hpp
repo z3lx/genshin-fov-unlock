@@ -10,7 +10,6 @@
 
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <vector>
 
 #include <Windows.h>
@@ -43,9 +42,9 @@ private:
     std::unique_ptr<Unlocker> unlocker;
 
     // State
-    std::optional<bool> isUnlockerHooked;
-    std::optional<bool> isWindowFocused;
-    std::optional<bool> isCursorVisible;
+    bool isUnlockerHooked;
+    bool isWindowFocused;
+    bool isCursorVisible;
     std::vector<HWND> targetWindows;
     Config config;
 };

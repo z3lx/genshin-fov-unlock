@@ -122,31 +122,41 @@ void Plugin::Uninitialize() try {
     LOG_F("Failed to uninitialize plugin: {}", e.what());
 }
 
-Plugin::Plugin() = default;
+Plugin::Plugin()
+    : isUnlockerHooked { false }
+    , isWindowFocused { true }
+    , isCursorVisible { true } {};
+
 Plugin::~Plugin() = default;
 
 template <>
-void Plugin::Handle(const OnPluginStart& event) noexcept try {
+void Plugin::Handle(const OnPluginStart& event) noexcept {
     keyboardObserver->SetEnabled(true);
     mouseObserver->SetEnabled(true);
     winEventNotifier->SetEnabled(true);
-    config = configManager->Read();
+
+    try {
+        config = configManager->Read();
+    } catch (const std::exception& e) {
+        LOG_W("Failed to read config: {}", e.what());
+    }
 
     unlocker->SetEnable(config.enabled);
     unlocker->SetFieldOfView(config.fov);
     unlocker->SetSmoothing(config.smoothing);
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnPluginStart event: {}", e.what());
 }
 
 template <>
-void Plugin::Handle(const OnPluginEnd& event) noexcept try {
+void Plugin::Handle(const OnPluginEnd& event) noexcept {
     keyboardObserver->SetEnabled(false);
     mouseObserver->SetEnabled(false);
     winEventNotifier->SetEnabled(false);
-    configManager->Write(config);
-} catch (const std::exception& e) {
-    LOG_E("Failed to handle OnPluginEnd event: {}", e.what());
+
+    try {
+        configManager->Write(config);
+    } catch (const std::exception& e) {
+        LOG_W("Failed to write config: {}", e.what());
+    }
 }
 
 template <>
@@ -155,7 +165,7 @@ void Plugin::Handle(const OnKeyDown& event) noexcept {
     auto& [enabled, fov, fovPresets, smoothing,
         enableKey, nextKey, prevKey, dumpKey] = config;
 
-    if (!isUnlockerHooked.value_or(false)) {
+    if (!isUnlockerHooked) {
         return;
     }
 
@@ -197,9 +207,8 @@ template <typename Event>
 void Plugin::Handle(const Event& event) noexcept {};
 
 void Plugin::ConsumeState() noexcept try {
-    const bool value = isWindowFocused.value_or(false) &&
-        !isCursorVisible.value_or(true);
-    if (isUnlockerHooked != value) {
+    if (const bool value = isWindowFocused && !isCursorVisible;
+        isUnlockerHooked != value) {
         unlocker->SetHook(value);
         isUnlockerHooked = value;
     }
