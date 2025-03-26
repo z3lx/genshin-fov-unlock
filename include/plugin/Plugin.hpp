@@ -35,7 +35,7 @@ private:
     // Components
     std::unique_ptr<KeyboardObserver> keyboardObserver;
     std::unique_ptr<MouseObserver> mouseObserver;
-    std::unique_ptr<WinEventNotifier> winEventNotifier;
+    // std::unique_ptr<WinEventNotifier> winEventNotifier;
     std::unique_ptr<ConfigManager> configManager;
     std::unique_ptr<Unlocker> unlocker;
 

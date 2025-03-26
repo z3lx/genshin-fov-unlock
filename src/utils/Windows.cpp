@@ -68,11 +68,15 @@ std::vector<HWND> GetProcessWindows(DWORD processId) {
         return TRUE;
     };
 
-    while (windows.empty()) {
+    const auto enumerateWindows = [&callback, &params]() {
         ThrowOnSystemError(EnumWindows(
             callback, reinterpret_cast<LPARAM>(&params)
         ));
+    };
+    while (windows.empty()) {
+        enumerateWindows();
         std::this_thread::sleep_for(std::chrono::seconds { 1 });
     }
+    enumerateWindows();
     return windows;
 }
