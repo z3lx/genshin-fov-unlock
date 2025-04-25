@@ -24,7 +24,7 @@ std::shared_ptr<Plugin> Plugin::MakePlugin() {
     auto plugin = std::shared_ptr<Plugin>(new Plugin {});
     plugin->keyboardObserver = std::make_unique<KeyboardObserver>(plugin);
     plugin->mouseObserver = std::make_unique<MouseObserver>(plugin);
-    // plugin->winEventNotifier = std::make_unique<WinEventNotifier>(plugin);
+    plugin->winEventNotifier = std::make_unique<WinEventNotifier>(plugin);
     plugin->configManager = std::make_unique<ConfigManager>(
         plugin, GetModulePath().parent_path() / "fov_config.json");
     plugin->unlocker = std::make_unique<Unlocker>(plugin);
@@ -49,7 +49,7 @@ template <>
 void Plugin::Handle(const OnPluginStart& event) noexcept {
     keyboardObserver->SetEnabled(true);
     mouseObserver->SetEnabled(true);
-    // winEventNotifier->SetEnabled(true);
+    winEventNotifier->SetEnabled(true);
 
     try {
         config = configManager->Read();
@@ -66,7 +66,7 @@ template <>
 void Plugin::Handle(const OnPluginEnd& event) noexcept {
     keyboardObserver->SetEnabled(false);
     mouseObserver->SetEnabled(false);
-    // winEventNotifier->SetEnabled(false);
+    winEventNotifier->SetEnabled(false);
 
     try {
         configManager->Write(config);
@@ -110,16 +110,14 @@ void Plugin::Handle(const OnKeyDown& event) noexcept {
 template <>
 void Plugin::Handle(const OnCursorVisibilityChange& event) noexcept {
     isCursorVisible = event.isCursorVisible;
-    const HWND foregroundWindow = GetForegroundWindow();
-    isWindowFocused = std::ranges::contains(targetWindows, foregroundWindow);
     ConsumeState();
 }
 
-// template <>
-// void Plugin::Handle(const OnForegroundWindowChange& event) noexcept {
-//     isWindowFocused = std::ranges::contains(targetWindows, event.hwnd);
-//     ConsumeState();
-// }
+template <>
+void Plugin::Handle(const OnForegroundWindowChange& event) noexcept {
+    isWindowFocused = std::ranges::contains(targetWindows, event.hwnd);
+    ConsumeState();
+}
 
 template <typename Event>
 void Plugin::Handle(const Event& event) noexcept {};

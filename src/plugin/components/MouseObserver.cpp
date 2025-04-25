@@ -81,10 +81,6 @@ bool MouseObserver::IsEnabled() const noexcept {
     return isEnabled;
 }
 
-std::optional<bool> MouseObserver::IsCursorVisible() const noexcept {
-    return isPreviousCursorVisible;
-}
-
 void MouseObserver::SetEnabled(const bool value) noexcept {
     isEnabled = value;
 }

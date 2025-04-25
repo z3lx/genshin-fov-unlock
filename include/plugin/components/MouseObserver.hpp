@@ -15,7 +15,6 @@ public:
     ~MouseObserver() noexcept override;
 
     [[nodiscard]] bool IsEnabled() const noexcept;
-    [[nodiscard]] std::optional<bool> IsCursorVisible() const noexcept;
     void SetEnabled(bool value) noexcept;
 
 private:
