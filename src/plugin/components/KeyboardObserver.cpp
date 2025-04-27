@@ -1,27 +1,21 @@
 #include "plugin/components/KeyboardObserver.hpp"
 #include "plugin/Events.hpp"
-#include "plugin/interfaces/IComponent.hpp"
-#include "plugin/interfaces/IMediator.hpp"
 #include "utils/ThreadWrapper.hpp"
 #include "utils/Windows.hpp"
 #include "utils/log/Logger.hpp"
 
 #include <algorithm>
 #include <exception>
-#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
 #include <unordered_map>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include <Windows.h>
 
-namespace {
-class KeyboardHook {
-public:
+struct KeyboardObserver::Hook {
     static void Register(KeyboardObserver* instance);
     static void Unregister(KeyboardObserver* instance) noexcept;
 
@@ -44,9 +38,8 @@ private:
         Prologue, Body, Epilogue>> thread {};
     static inline std::unordered_map<int, bool> keyHeldStates {};
 };
-} // namespace
 
-void KeyboardHook::Register(KeyboardObserver* instance) try {
+void KeyboardObserver::Hook::Register(KeyboardObserver* instance) try {
     std::lock_guard lock { mutex };
     if (const auto it = std::ranges::find(instances, instance);
         it != instances.end()) {
@@ -61,7 +54,7 @@ void KeyboardHook::Register(KeyboardObserver* instance) try {
     throw;
 }
 
-void KeyboardHook::Unregister(KeyboardObserver* instance) noexcept {
+void KeyboardObserver::Hook::Unregister(KeyboardObserver* instance) noexcept {
     std::lock_guard lock { mutex };
     if (const auto it = std::ranges::find(instances, instance);
         it != instances.end()) {
@@ -72,7 +65,7 @@ void KeyboardHook::Unregister(KeyboardObserver* instance) noexcept {
     }
 }
 
-LRESULT CALLBACK KeyboardHook::KeyboardProc(
+LRESULT CALLBACK KeyboardObserver::Hook::KeyboardProc(
     const int nCode, const WPARAM wParam, const LPARAM lParam) noexcept {
     const auto next = [nCode, wParam, lParam]() noexcept {
         return CallNextHookEx(hHook, nCode, wParam, lParam);
@@ -112,60 +105,53 @@ LRESULT CALLBACK KeyboardHook::KeyboardProc(
         default: break;
     }
 
-    // Notify
-    std::unique_lock lock { mutex };
-    for (const auto instance : instances) {
-        if (!instance->IsEnabled()) {
-            continue;
-        }
-        if (const auto mediator = instance->GetMediator().lock()) {
-            mediator->Notify(event);
+    {
+        std::lock_guard lock { mutex };
+        for (const auto instance : instances) {
+            std::lock_guard instanceLock { instance->mutex };
+            instance->keyboardEvents.emplace_back(event);
         }
     }
-    lock.unlock();
 
     return next();
 }
 
-void KeyboardHook::SetHook() {
+void KeyboardObserver::Hook::SetHook() {
     ThrowOnSystemError(hHook = SetWindowsHookEx(
         WH_KEYBOARD_LL, KeyboardProc, nullptr, 0
     ));
 }
 
-void KeyboardHook::MessageLoop() noexcept {
-    MSG msg;
+void KeyboardObserver::Hook::MessageLoop() noexcept {
+    MSG msg {};
     while (GetMessage(&msg, nullptr, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 }
 
-void KeyboardHook::ClearHook(std::thread& thread) noexcept {
+void KeyboardObserver::Hook::ClearHook(std::thread& thread) noexcept {
     const auto threadId = GetThreadId(thread.native_handle());
     PostThreadMessage(threadId, WM_QUIT, 0, 0);
     UnhookWindowsHookEx(hHook);
     hHook = nullptr;
 }
 
-KeyboardObserver::KeyboardObserver(
-    std::weak_ptr<IMediator<Event>> mediator) try
-    : IComponent { std::move(mediator) }
-    , isEnabled { false } {
-    KeyboardHook::Register(this);
+KeyboardObserver::KeyboardObserver() try {
+    Hook::Register(this);
 } catch (const std::exception& e) {
     LOG_E("Failed to create KeyboardObserver: {}", e.what());
     throw;
 }
 
 KeyboardObserver::~KeyboardObserver() noexcept {
-    KeyboardHook::Unregister(this);
+    Hook::Unregister(this);
 }
 
-bool KeyboardObserver::IsEnabled() const noexcept {
-    return isEnabled;
-}
-
-void KeyboardObserver::SetEnabled(const bool value) noexcept {
-    isEnabled = value;
+void KeyboardObserver::Update() noexcept {
+    std::lock_guard lock { mutex };
+    for (const auto& event : keyboardEvents) {
+        Notify(event);
+    }
+    keyboardEvents.clear();
 }

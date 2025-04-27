@@ -27,7 +27,7 @@ struct OnCursorVisibilityChange {
 };
 
 struct OnForegroundWindowChange {
-    const HWND hwnd;
+    const HWND foregroundWindow;
 };
 
 using Event = std::variant<

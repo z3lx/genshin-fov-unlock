@@ -2,30 +2,16 @@
 
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IComponent.hpp"
-#include "plugin/interfaces/IMediator.hpp"
 
-#include <memory>
-#include <mutex>
 #include <optional>
-#include <thread>
 
 class MouseObserver final : public IComponent<Event> {
 public:
-    explicit MouseObserver(std::weak_ptr<IMediator<Event>> mediator);
+    MouseObserver() noexcept;
     ~MouseObserver() noexcept override;
 
-    [[nodiscard]] bool IsEnabled() const noexcept;
-    void SetEnabled(bool value) noexcept;
-
 private:
-    void StartPolling();
-    void StopPolling() noexcept;
-    void PollingLoop() noexcept;
+    void Update() noexcept override;
 
-    bool isEnabled;
-    bool isPolling;
     std::optional<bool> isPreviousCursorVisible;
-
-    std::mutex mutex;
-    std::thread thread;
 };

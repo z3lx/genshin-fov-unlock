@@ -2,10 +2,8 @@
 
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IComponent.hpp"
-#include "plugin/interfaces/IMediator.hpp"
 
 #include <filesystem>
-#include <memory>
 #include <vector>
 
 #include <Windows.h>
@@ -27,7 +25,6 @@ struct Config {
 class ConfigManager final : public IComponent<Event> {
 public:
     explicit ConfigManager(
-        std::weak_ptr<IMediator<Event>> mediator,
         std::filesystem::path filePath = "fov_config.json") noexcept;
     ~ConfigManager() noexcept override;
 

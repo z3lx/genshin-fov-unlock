@@ -1,6 +1,4 @@
 #include "plugin/components/Unlocker.hpp"
-#include "plugin/Events.hpp"
-#include "plugin/interfaces/IMediator.hpp"
 #include "utils/ExponentialFilter.hpp"
 #include "utils/MinHook.hpp"
 #include "utils/log/Logger.hpp"
@@ -17,7 +15,6 @@
 #include <string>
 #include <tuple>
 #include <utility>
-#include <variant>
 
 #include <Windows.h>
 
@@ -44,8 +41,7 @@ float previousFov = 45.0f;
 bool isPreviousFov = false;
 } // namespace
 
-Unlocker::Unlocker(std::weak_ptr<IMediator<Event>> mediator) try
-    : IComponent { std::move(mediator) } {
+Unlocker::Unlocker() try {
     std::lock_guard lock { mutex };
 
     auto module = reinterpret_cast<uintptr_t>(

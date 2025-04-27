@@ -10,66 +10,52 @@
 
 #include <chrono>
 #include <exception>
-#include <memory>
-#include <mutex>
 #include <ranges>
-#include <thread>
-#include <tuple>
-#include <utility>
 #include <variant>
 
 #include <Windows.h>
 
-std::shared_ptr<Plugin> Plugin::MakePlugin() {
-    auto plugin = std::shared_ptr<Plugin>(new Plugin {});
-    plugin->keyboardObserver = std::make_unique<KeyboardObserver>(plugin);
-    plugin->mouseObserver = std::make_unique<MouseObserver>(plugin);
-    plugin->winEventNotifier = std::make_unique<WinEventNotifier>(plugin);
-    plugin->configManager = std::make_unique<ConfigManager>(
-        plugin, GetModulePath().parent_path() / "fov_config.json");
-    plugin->unlocker = std::make_unique<Unlocker>(plugin);
-
-    plugin->targetWindows = GetProcessWindows();
-    plugin->Notify(OnPluginStart {});
-    return plugin;
-}
-
 Plugin::Plugin()
     : isUnlockerHooked { false }
     , isWindowFocused { true }
-    , isCursorVisible { true } {
-    // Construction delegated to MakePlugin
-};
+    , isCursorVisible { true } {};
 
 Plugin::~Plugin() {
     Notify(OnPluginEnd {});
 }
 
+void Plugin::Start() noexcept try {
+    SetComponent<Unlocker>();
+    SetComponent<ConfigManager>(
+        GetModulePath().parent_path() / "fov_config.json");
+    SetComponent<WinEventNotifier>();
+    SetComponent<MouseObserver>();
+    SetComponent<KeyboardObserver>();
+
+    targetWindows = GetProcessWindows();
+    Notify(OnPluginStart {});
+} catch (const std::exception& e) {
+    LOG_E("Failed to start plugin: {}", e.what());
+}
+
 template <>
 void Plugin::Handle(const OnPluginStart& event) noexcept {
-    keyboardObserver->SetEnabled(true);
-    mouseObserver->SetEnabled(true);
-    winEventNotifier->SetEnabled(true);
-
     try {
-        config = configManager->Read();
+        config = GetComponent<ConfigManager>().Read();
     } catch (const std::exception& e) {
         LOG_W("Failed to read config: {}", e.what());
     }
 
-    unlocker->SetEnable(config.enabled);
-    unlocker->SetFieldOfView(config.fov);
-    unlocker->SetSmoothing(config.smoothing);
+    auto& unlocker = GetComponent<Unlocker>();
+    unlocker.SetEnable(config.enabled);
+    unlocker.SetFieldOfView(config.fov);
+    unlocker.SetSmoothing(config.smoothing);
 }
 
 template <>
 void Plugin::Handle(const OnPluginEnd& event) noexcept {
-    keyboardObserver->SetEnabled(false);
-    mouseObserver->SetEnabled(false);
-    winEventNotifier->SetEnabled(false);
-
     try {
-        configManager->Write(config);
+        GetComponent<ConfigManager>().Write(config);
     } catch (const std::exception& e) {
         LOG_W("Failed to write config: {}", e.what());
     }
@@ -85,23 +71,24 @@ void Plugin::Handle(const OnKeyDown& event) noexcept {
         return;
     }
 
+    auto& unlocker = GetComponent<Unlocker>();
     if (key == enableKey) {
         enabled = !enabled;
-        unlocker->SetEnable(enabled);
-    } else if (!enabled) {
+        unlocker.SetEnable(enabled);
+    } else if (!enabled || isCursorVisible) {
         return;
     } else if (key == nextKey) {
         const auto it = std::ranges::find_if(
             fovPresets,
             [fov](const int fovPreset) { return fov < fovPreset; });
         fov = it != fovPresets.end() ? *it : fovPresets.front();
-        unlocker->SetFieldOfView(fov);
+        unlocker.SetFieldOfView(fov);
     } else if (key == prevKey) {
         const auto it = std::ranges::find_if(
             fovPresets | std::views::reverse,
             [fov](const int fovPreset) { return fov > fovPreset; });
         fov = it != fovPresets.rend() ? *it : fovPresets.back();
-        unlocker->SetFieldOfView(fov);
+        unlocker.SetFieldOfView(fov);
     } else if (key == dumpKey) {
         // TODO: plugin.unlocker.DumpBuffer();
     }
@@ -115,7 +102,7 @@ void Plugin::Handle(const OnCursorVisibilityChange& event) noexcept {
 
 template <>
 void Plugin::Handle(const OnForegroundWindowChange& event) noexcept {
-    isWindowFocused = std::ranges::contains(targetWindows, event.hwnd);
+    isWindowFocused = std::ranges::contains(targetWindows, event.foregroundWindow);
     ConsumeState();
 }
 
@@ -125,7 +112,7 @@ void Plugin::Handle(const Event& event) noexcept {};
 void Plugin::ConsumeState() noexcept try {
     if (const bool value = isWindowFocused && !isCursorVisible;
         isUnlockerHooked != value) {
-        unlocker->SetHook(value);
+        GetComponent<Unlocker>().SetHook(value);
         isUnlockerHooked = value;
     }
 } catch (const std::exception& e) {
@@ -145,6 +132,5 @@ void Plugin::Visitor::operator()(const Event& event) const noexcept {
 }
 
 void Plugin::Notify(const Event& event) noexcept {
-    std::lock_guard lock { mutex };
     std::visit(Visitor { *this }, event);
 }

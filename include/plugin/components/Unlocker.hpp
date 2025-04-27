@@ -2,13 +2,10 @@
 
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IComponent.hpp"
-#include "plugin/interfaces/IMediator.hpp"
-
-#include <memory>
 
 class Unlocker final : public IComponent<Event> {
 public:
-    explicit Unlocker(std::weak_ptr<IMediator<Event>> mediator);
+    Unlocker();
     ~Unlocker() noexcept override;
 
     void SetHook(bool value) const;
