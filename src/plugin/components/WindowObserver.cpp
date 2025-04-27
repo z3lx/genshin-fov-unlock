@@ -1,14 +1,14 @@
-#include "plugin/components/WinEventNotifier.hpp"
+#include "plugin/components/WindowObserver.hpp"
 #include "plugin/Events.hpp"
 
 #include <Windows.h>
 
-WinEventNotifier::WinEventNotifier() noexcept
+WindowObserver::WindowObserver() noexcept
     : previousForegroundWindow { nullptr } {}
 
-WinEventNotifier::~WinEventNotifier() noexcept = default;
+WindowObserver::~WindowObserver() noexcept = default;
 
-void WinEventNotifier::Update() noexcept {
+void WindowObserver::Update() noexcept {
     if (const auto currentForegroundWindow = GetForegroundWindow();
         currentForegroundWindow != previousForegroundWindow) {
         previousForegroundWindow = currentForegroundWindow;

@@ -5,10 +5,10 @@
 
 #include <Windows.h>
 
-class WinEventNotifier final : public IComponent<Event> {
+class WindowObserver final : public IComponent<Event> {
 public:
-    WinEventNotifier() noexcept;
-    ~WinEventNotifier() noexcept override;
+    WindowObserver() noexcept;
+    ~WindowObserver() noexcept override;
 
 private:
     void Update() noexcept override;

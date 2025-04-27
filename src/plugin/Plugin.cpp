@@ -4,7 +4,7 @@
 #include "plugin/components/CursorObserver.hpp"
 #include "plugin/components/KeyboardObserver.hpp"
 #include "plugin/components/Unlocker.hpp"
-#include "plugin/components/WinEventNotifier.hpp"
+#include "plugin/components/WindowObserver.hpp"
 #include "utils/Windows.hpp"
 #include "utils/log/Logger.hpp"
 
@@ -28,7 +28,7 @@ void Plugin::Start() noexcept try {
     SetComponent<Unlocker>();
     SetComponent<ConfigManager>(
         GetModulePath().parent_path() / "fov_config.json");
-    SetComponent<WinEventNotifier>();
+    SetComponent<WindowObserver>();
     SetComponent<CursorObserver>();
     SetComponent<KeyboardObserver>();
 
