@@ -5,10 +5,10 @@
 
 #include <optional>
 
-class MouseObserver final : public IComponent<Event> {
+class CursorObserver final : public IComponent<Event> {
 public:
-    MouseObserver() noexcept;
-    ~MouseObserver() noexcept override;
+    CursorObserver() noexcept;
+    ~CursorObserver() noexcept override;
 
 private:
     void Update() noexcept override;
