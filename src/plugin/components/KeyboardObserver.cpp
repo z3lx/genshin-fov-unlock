@@ -5,6 +5,7 @@
 #include "utils/log/Logger.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <exception>
 #include <mutex>
 #include <optional>
@@ -36,7 +37,7 @@ private:
     static inline std::vector<KeyboardObserver*> instances {};
     static inline std::optional<ThreadWrapper<
         Prologue, Body, Epilogue>> thread {};
-    static inline std::unordered_map<int, bool> keyHeldStates {};
+    static inline std::unordered_map<uint8_t, bool> keyDownStates {};
 };
 
 void KeyboardObserver::Hook::Register(KeyboardObserver* instance) try {
@@ -77,29 +78,29 @@ LRESULT CALLBACK KeyboardObserver::Hook::KeyboardProc(
 
     Event event {};
     const auto keyboard = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
-    const auto key = static_cast<int>(keyboard->vkCode);
-    bool* isKeyHeldPtr {};
+    const auto key = static_cast<uint8_t>(keyboard->vkCode);
+    bool* isKeyDownPtr {};
     try {
-        isKeyHeldPtr = &keyHeldStates[key];
+        isKeyDownPtr = &keyDownStates[key];
     } catch (const std::exception& e) {
         LOG_E("Failed to get key state: {}", e.what());
         return next();
     }
-    auto& isKeyHeld = *isKeyHeldPtr;
+    auto& isKeyDown = *isKeyDownPtr;
 
     switch (wParam) {
         case WM_KEYDOWN: case WM_SYSKEYDOWN: {
-            if (isKeyHeld) {
+            if (isKeyDown) {
                 event.emplace<OnKeyHold>(key);
             } else {
                 event.emplace<OnKeyDown>(key);
             }
-            isKeyHeld = true;
+            isKeyDown = true;
             break;
         }
         case WM_KEYUP: case WM_SYSKEYUP: {
             event.emplace<OnKeyUp>(key);
-            isKeyHeld = false;
+            isKeyDown = false;
             break;
         }
         default: break;
