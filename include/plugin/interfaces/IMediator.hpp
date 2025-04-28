@@ -152,7 +152,9 @@ void IMediator<Event>::StartThread() {
                 component->Update();
             }
             Update();
-            std::this_thread::sleep_for(std::chrono::milliseconds { 100 });
+            // Wait until the next scheduler tick
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds { 1 });
         }
     });
 }

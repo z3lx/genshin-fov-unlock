@@ -8,12 +8,9 @@
 #include "utils/Windows.hpp"
 #include "utils/log/Logger.hpp"
 
-#include <chrono>
 #include <exception>
 #include <ranges>
 #include <variant>
-
-#include <Windows.h>
 
 Plugin::Plugin()
     : isUnlockerHooked { false }
@@ -102,7 +99,8 @@ void Plugin::Handle(const OnCursorVisibilityChange& event) noexcept {
 
 template <>
 void Plugin::Handle(const OnForegroundWindowChange& event) noexcept {
-    isWindowFocused = std::ranges::contains(targetWindows, event.foregroundWindow);
+    isWindowFocused = std::ranges::contains(
+        targetWindows, event.foregroundWindow);
     ConsumeState();
 }
 
