@@ -51,6 +51,7 @@ private:
     std::atomic<bool> stopFlag;
     std::thread thread;
     std::vector<std::unique_ptr<IComponent<Event>>> components;
+    std::vector<Event> events;
 
     using ComponentIterator =
         typename decltype(components)::iterator;
@@ -148,10 +149,18 @@ void IMediator<Event>::StartThread() {
     thread = std::thread([this]() {
         Start();
         while (!stopFlag.load()) {
+            // Update components
             for (auto& component : components) {
                 component->Update();
             }
             Update();
+
+            // Process events
+            for (const auto& event : events) {
+                Notify(event);
+            }
+            events.clear();
+
             // Wait until the next scheduler tick
             std::this_thread::sleep_for(
                 std::chrono::milliseconds { 1 });

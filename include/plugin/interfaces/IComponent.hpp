@@ -40,6 +40,6 @@ void IComponent<Event>::SetMediator(IMediator<Event>* mediator) noexcept {
 template <typename Event>
 void IComponent<Event>::Notify(const Event& event) noexcept {
     if (mediator) {
-        mediator->Notify(event);
+        mediator->events.push_back(event);
     }
 }
