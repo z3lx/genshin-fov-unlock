@@ -20,7 +20,7 @@
 
 namespace {
 constexpr auto OFFSET_GL = 0xFD8BE0;
-constexpr auto OFFSET_CN = 0xFA0F70;
+constexpr auto OFFSET_CN = 0xFD8BE0;
 
 void HkSetFieldOfView(void* instance, float value) noexcept;
 void AddToBuffer(void* instance, float value);
