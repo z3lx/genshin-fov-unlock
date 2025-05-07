@@ -19,7 +19,7 @@
 #include <Windows.h>
 
 namespace {
-constexpr auto OFFSET_GL = 0xFA2F70;
+constexpr auto OFFSET_GL = 0xFD8BE0;
 constexpr auto OFFSET_CN = 0xFA0F70;
 
 void HkSetFieldOfView(void* instance, float value) noexcept;
