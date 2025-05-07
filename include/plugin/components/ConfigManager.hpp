@@ -2,10 +2,9 @@
 
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IComponent.hpp"
-#include "plugin/interfaces/IMediator.hpp"
 
+#include <cstdint>
 #include <filesystem>
-#include <memory>
 #include <vector>
 
 #include <Windows.h>
@@ -16,18 +15,17 @@ struct Config {
     std::vector<int> fovPresets {
         30, 45, 60, 75, 90, 110
     };
-    double smoothing = 0.125;
+    float smoothing = 0.125;
 
-    int enableKey = VK_DOWN;
-    int nextKey = VK_RIGHT;
-    int prevKey = VK_LEFT;
-    int dumpKey = VK_F12;
+    uint8_t enableKey = VK_DOWN;
+    uint8_t nextKey = VK_RIGHT;
+    uint8_t prevKey = VK_LEFT;
+    uint8_t dumpKey = VK_F12;
 };
 
 class ConfigManager final : public IComponent<Event> {
 public:
     explicit ConfigManager(
-        std::weak_ptr<IMediator<Event>> mediator,
         std::filesystem::path filePath = "fov_config.json") noexcept;
     ~ConfigManager() noexcept override;
 

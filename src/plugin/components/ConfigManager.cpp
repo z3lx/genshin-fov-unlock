@@ -1,7 +1,4 @@
 #include "plugin/components/ConfigManager.hpp"
-#include "plugin/Events.hpp"
-#include "plugin/interfaces/IComponent.hpp"
-#include "plugin/interfaces/IMediator.hpp"
 #include "utils/log/Logger.hpp"
 
 #include <nlohmann/json.hpp>
@@ -24,11 +21,8 @@ constexpr auto PREV_KEY = "prev_key";
 constexpr auto DUMP_KEY = "dump_key";
 } // namespace
 
-ConfigManager::ConfigManager(
-    std::weak_ptr<IMediator<Event>> mediator,
-    std::filesystem::path filePath) noexcept
-    : IComponent { std::move(mediator) }
-    , filePath { std::move(filePath) } {}
+ConfigManager::ConfigManager(std::filesystem::path filePath) noexcept
+    : filePath { std::move(filePath) } {}
 
 ConfigManager::~ConfigManager() noexcept = default;
 

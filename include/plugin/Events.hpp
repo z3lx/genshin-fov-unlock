@@ -1,25 +1,24 @@
 #pragma once
 
+#include <cstdint>
 #include <variant>
 
 #include <Windows.h>
 
-struct OnPluginStart {
-};
+struct OnPluginStart {};
 
-struct OnPluginEnd {
-};
+struct OnPluginEnd {};
 
 struct OnKeyDown {
-    const int vKey;
+    const uint8_t vKey;
 };
 
 struct OnKeyHold {
-    const int vKey;
+    const uint8_t vKey;
 };
 
 struct OnKeyUp {
-    const int vKey;
+    const uint8_t vKey;
 };
 
 struct OnCursorVisibilityChange {
@@ -27,7 +26,7 @@ struct OnCursorVisibilityChange {
 };
 
 struct OnForegroundWindowChange {
-    const HWND hwnd;
+    const HWND foregroundWindow;
 };
 
 using Event = std::variant<

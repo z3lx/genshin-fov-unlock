@@ -2,18 +2,20 @@
 
 #include "plugin/Events.hpp"
 #include "plugin/interfaces/IComponent.hpp"
-#include "plugin/interfaces/IMediator.hpp"
 
-#include <memory>
+#include <mutex>
+#include <vector>
 
 class KeyboardObserver final : public IComponent<Event> {
 public:
-    explicit KeyboardObserver(std::weak_ptr<IMediator<Event>> mediator);
+    KeyboardObserver();
     ~KeyboardObserver() noexcept override;
 
-    [[nodiscard]] bool IsEnabled() const noexcept;
-    void SetEnabled(bool value) noexcept;
-
 private:
-    bool isEnabled;
+    struct Hook;
+
+    void Update() noexcept override;
+
+    std::mutex mutex;
+    std::vector<Event> keyboardEvents;
 };

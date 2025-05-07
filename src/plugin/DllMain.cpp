@@ -10,7 +10,7 @@
 #include <Windows.h>
 
 namespace {
-std::shared_ptr<Plugin> plugin {};
+std::unique_ptr<Plugin> plugin {};
 
 void Initialize() noexcept {
     const auto init = []() {
@@ -21,7 +21,7 @@ void Initialize() noexcept {
                 workingDirectory / "logs.txt", true));
             // LOG_D("Working directory: {}", workingDirectory.string());
 
-            plugin = Plugin::MakePlugin();
+            plugin = std::make_unique<Plugin>();
         } catch (const std::exception& e) {
             LOG_F("Failed to initialize plugin: {}", e.what());
         }
